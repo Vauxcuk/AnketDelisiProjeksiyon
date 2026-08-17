@@ -166,9 +166,12 @@ def load_base_data():
                 yp_vote = (pivot_base.loc[district, 'CHP'] * 0.875) + (pivot_base.loc[district, 'IYI'] * 0.125)
                 new_rows.append({'district': district, 'party': 'YENI', 'base_vote_pct': yp_vote, 'seat_count': seat_count})
             
-            # A Partisi: %50 AKP + %30 İYİ + %20 MHP
-            if all(col in pivot_base.columns for col in ['AKP', 'IYI', 'MHP']):
-                a_vote = (pivot_base.loc[district, 'AKP'] * 0.50) + (pivot_base.loc[district, 'IYI'] * 0.30) + (pivot_base.loc[district, 'MHP'] * 0.20)
+            # --- A PARTİSİ SENTETİK TABANI (%50 AKP + %20 BBP + %20 MHP + %10 İYİ) ---
+            if all(col in pivot_base.columns for col in ['AKP', 'BBP', 'MHP', 'IYI']):
+                a_vote = (pivot_base.loc[district, 'AKP'] * 0.50) + \
+                         (pivot_base.loc[district, 'BBP'] * 0.20) + \
+                         (pivot_base.loc[district, 'MHP'] * 0.20) + \
+                         (pivot_base.loc[district, 'IYI'] * 0.10)
                 new_rows.append({'district': district, 'party': 'A', 'base_vote_pct': a_vote, 'seat_count': seat_count})
         
         if new_rows:
@@ -190,14 +193,14 @@ def load_base_data():
 df_base, base_national_dict = load_base_data()
 
 # Tüm partiler eksiksiz tanımlandı
-PARTIES = ['AKP', 'CHP', 'IYI', 'DEM', 'MHP', 'YRP', 'TIP', 'ZAFER', 'YENI', 'A']
+PARTIES = PARTIES = ['AKP', 'CHP', 'IYI', 'DEM', 'MHP', 'YRP', 'TIP', 'ZAFER', 'YENI', 'A', 'BBP']
 PARTIES = [p for p in PARTIES if p in base_national_dict]
 
 party_colors = {
     'AKP': '#FDA000', 'CHP': '#3485fd', 'MHP': '#137BBB', 
     'DEM': '#90268F', 'IYI': '#FFC107', 'YRP': '#009840', 
     'TIP': '#FF1D25', 'ZAFER': '#474647', 'YENI': '#A7050E',
-    'A': '#20379f',
+    'A': '#20379f', 'BBP': '#9e3a3a' # BBP için dilediğin renk kodunu verebilirsin (Örn: Ateş Kırmızısı)
 }
 
 # ==========================================
@@ -386,7 +389,7 @@ if use_alliances:
     st.sidebar.markdown("**Ön Tanımlı İttifaklar:**")
     enable_cumhur = st.sidebar.checkbox("Cumhur İttifakı", value=True)
     if enable_cumhur:
-        default_cumhur = [p for p in ['AKP', 'MHP'] if p in PARTIES]
+        default_cumhur = [p for p in ['AKP', 'MHP', 'BBP'] if p in PARTIES]
         cumhur_parties = st.sidebar.multiselect("Cumhur İttifakı Üyeleri", PARTIES, default=default_cumhur, key="cumhur_parties")
         if cumhur_parties: alliances["Cumhur İttifakı"] = cumhur_parties
             
@@ -408,8 +411,9 @@ st.sidebar.divider()
 st.sidebar.markdown("**Ulusal Oy Oranları**")
 
 custom_start_values = {
-    'AKP': 29.0, 'CHP': 1.0, 'MHP': 7.0, 'DEM': 8.0, 
-    'IYI': 3.0, 'YRP': 4.0, 'ZAFER': 3.0, 'TIP': 2.0, 'YENI': 37.0, 'A': 4.0
+    'AKP': 27.4, 'CHP': 1.0, 'MHP': 5.4, 'DEM': 7.6, 
+    'IYI': 5.1, 'YRP': 3.8, 'ZAFER': 2.9, 'TIP': 1.1,
+    'YENI': 38.3, 'A': 4.5, 'BBP': 0.9
 }
 
 user_inputs = {}
@@ -476,7 +480,7 @@ with col2:
     df_plot = national_summary_df[national_summary_df['Vekil'] > 0].copy()
     toplam_vekil = df_plot['Vekil'].sum()
 
-    istenen_sira = ['TIP', 'DEM', 'CHP', 'YENI', 'IYI', 'ZAFER', 'A', 'AKP', 'MHP', 'YRP']
+    istenen_sira = ['TIP', 'DEM', 'YENI', 'CHP', 'IYI', 'ZAFER', 'A', 'AKP', 'MHP', 'BBP', 'YRP']
     sirali_partiler = [p for p in istenen_sira if p in df_plot['Parti'].values]
     for p in df_plot['Parti'].values:
         if p not in sirali_partiler: sirali_partiler.append(p)

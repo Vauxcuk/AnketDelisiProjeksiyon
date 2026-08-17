@@ -7,6 +7,7 @@ Adana,15,MHP,11
 Adana,15,YRP,1.8
 Adana,15,TIP,2.3
 Adana,15,ZAFER,2.1
+Adana,15,BBP,0.9
 Adıyaman,5,AKP,52.3
 Adıyaman,5,CHP,18.8
 Adıyaman,5,IYI,0
@@ -15,6 +16,7 @@ Adıyaman,5,MHP,4.3
 Adıyaman,5,YRP,4.7
 Adıyaman,5,TIP,0
 Adıyaman,5,ZAFER,0.6
+Adıyaman,5,BBP,1
 Afyonkarahisar,6,AKP,44.2
 Afyonkarahisar,6,CHP,18.8
 Afyonkarahisar,6,IYI,12.4
@@ -23,6 +25,7 @@ Afyonkarahisar,6,MHP,16.1
 Afyonkarahisar,6,YRP,2.9
 Afyonkarahisar,6,TIP,0.3
 Afyonkarahisar,6,ZAFER,2.2
+Afyonkarahisar,6,BBP,1.1
 Ağrı,4,AKP,25.4
 Ağrı,4,CHP,11.2
 Ağrı,4,IYI,1.7
@@ -31,6 +34,7 @@ Ağrı,4,MHP,2.6
 Ağrı,4,YRP,2
 Ağrı,4,TIP,0
 Ağrı,4,ZAFER,0.2
+Ağrı,4,BBP,0.3
 Amasya,3,AKP,39.6
 Amasya,3,CHP,29.6
 Amasya,3,IYI,7.1
@@ -39,6 +43,7 @@ Amasya,3,MHP,16.8
 Amasya,3,YRP,1.8
 Amasya,3,TIP,0.5
 Amasya,3,ZAFER,1.5
+Amasya,3,BBP,0.8
 Ankara-1,13,AKP,25
 Ankara-1,13,CHP,41.6
 Ankara-1,13,IYI,13
@@ -47,6 +52,7 @@ Ankara-1,13,MHP,8.2
 Ankara-1,13,YRP,1.9
 Ankara-1,13,TIP,0
 Ankara-1,13,ZAFER,3
+Ankara-1,13,BBP,0.9
 Ankara-2,11,AKP,41.8
 Ankara-2,11,CHP,20.7
 Ankara-2,11,IYI,11.5
@@ -55,6 +61,7 @@ Ankara-2,11,MHP,12
 Ankara-2,11,YRP,3.5
 Ankara-2,11,TIP,1.2
 Ankara-2,11,ZAFER,3.4
+Ankara-2,11,BBP,1.4
 Ankara-3,13,AKP,32.3
 Ankara-3,13,CHP,27.8
 Ankara-3,13,IYI,13.8
@@ -63,6 +70,7 @@ Ankara-3,13,MHP,10.8
 Ankara-3,13,YRP,2.7
 Ankara-3,13,TIP,2.5
 Ankara-3,13,ZAFER,3.6
+Ankara-3,13,BBP,1.6
 Antalya,18,AKP,29.1
 Antalya,18,CHP,32.3
 Antalya,18,IYI,11.3
@@ -71,6 +79,7 @@ Antalya,18,MHP,10
 Antalya,18,YRP,1.3
 Antalya,18,TIP,4.6
 Antalya,18,ZAFER,2.8
+Antalya,18,BBP,0.7
 Artvin,2,AKP,37.2
 Artvin,2,CHP,29.9
 Artvin,2,IYI,13
@@ -79,6 +88,7 @@ Artvin,2,MHP,9.7
 Artvin,2,YRP,2.3
 Artvin,2,TIP,1.6
 Artvin,2,ZAFER,1.2
+Artvin,2,BBP,0.4
 Aydın,8,AKP,28.7
 Aydın,8,CHP,35.6
 Aydın,8,IYI,12.9
@@ -87,6 +97,7 @@ Aydın,8,MHP,8.6
 Aydın,8,YRP,0.7
 Aydın,8,TIP,0
 Aydın,8,ZAFER,2.2
+Aydın,8,BBP,0.9
 Balıkesir,9,AKP,34.7
 Balıkesir,9,CHP,31.5
 Balıkesir,9,IYI,14.6
@@ -95,6 +106,7 @@ Balıkesir,9,MHP,8.2
 Balıkesir,9,YRP,2.1
 Balıkesir,9,TIP,1.3
 Balıkesir,9,ZAFER,2.1
+Balıkesir,9,BBP,0.7
 Bilecik,2,AKP,37.2
 Bilecik,2,CHP,26.7
 Bilecik,2,IYI,12.2
@@ -103,6 +115,7 @@ Bilecik,2,MHP,10.3
 Bilecik,2,YRP,3.3
 Bilecik,2,TIP,0.9
 Bilecik,2,ZAFER,2.2
+Bilecik,2,BBP,0.9
 Bingöl,3,AKP,39.2
 Bingöl,3,CHP,5.8
 Bingöl,3,IYI,2
@@ -111,6 +124,7 @@ Bingöl,3,MHP,13.6
 Bingöl,3,YRP,10
 Bingöl,3,TIP,0
 Bingöl,3,ZAFER,0.2
+Bingöl,3,BBP,0.5
 Bitlis,3,AKP,37.7
 Bitlis,3,CHP,0
 Bitlis,3,IYI,13
@@ -119,6 +133,7 @@ Bitlis,3,MHP,3.9
 Bitlis,3,YRP,2.1
 Bitlis,3,TIP,0
 Bitlis,3,ZAFER,0.2
+Bitlis,3,BBP,0.3
 Bolu,3,AKP,37
 Bolu,3,CHP,21.9
 Bolu,3,IYI,7.4
@@ -127,6 +142,7 @@ Bolu,3,MHP,23.3
 Bolu,3,YRP,3.2
 Bolu,3,TIP,0.6
 Bolu,3,ZAFER,1.9
+Bolu,3,BBP,0.8
 Burdur,3,AKP,36.6
 Burdur,3,CHP,31.1
 Burdur,3,IYI,11.4
@@ -135,6 +151,7 @@ Burdur,3,MHP,14
 Burdur,3,YRP,1.2
 Burdur,3,TIP,0
 Burdur,3,ZAFER,1.4
+Burdur,3,BBP,0.7
 Bursa-1,11,AKP,35.8
 Bursa-1,11,CHP,27.1
 Bursa-1,11,IYI,13.6
@@ -143,6 +160,7 @@ Bursa-1,11,MHP,8
 Bursa-1,11,YRP,3.2
 Bursa-1,11,TIP,1.4
 Bursa-1,11,ZAFER,3.8
+Bursa-1,11,BBP,0.9
 Bursa-2,10,AKP,42.5
 Bursa-2,10,CHP,21.4
 Bursa-2,10,IYI,10.1
@@ -151,6 +169,7 @@ Bursa-2,10,MHP,9.2
 Bursa-2,10,YRP,4
 Bursa-2,10,TIP,0
 Bursa-2,10,ZAFER,3.5
+Bursa-2,10,BBP,0.7
 Çanakkale,4,AKP,32.1
 Çanakkale,4,CHP,35.3
 Çanakkale,4,IYI,16.3
@@ -159,6 +178,7 @@ Bursa-2,10,ZAFER,3.5
 Çanakkale,4,YRP,1
 Çanakkale,4,TIP,1.3
 Çanakkale,4,ZAFER,2
+Çanakkale,4,BBP,0.4
 Çankırı,2,AKP,42.7
 Çankırı,2,CHP,0
 Çankırı,2,IYI,17.7
@@ -167,6 +187,7 @@ Bursa-2,10,ZAFER,3.5
 Çankırı,2,YRP,3
 Çankırı,2,TIP,0.3
 Çankırı,2,ZAFER,1.5
+Çankırı,2,BBP,1
 Çorum,4,AKP,40.3
 Çorum,4,CHP,30.8
 Çorum,4,IYI,0
@@ -175,6 +196,7 @@ Bursa-2,10,ZAFER,3.5
 Çorum,4,YRP,3.3
 Çorum,4,TIP,0.4
 Çorum,4,ZAFER,1.5
+Çorum,4,BBP,0.8
 Denizli,7,AKP,34
 Denizli,7,CHP,31.9
 Denizli,7,IYI,14.1
@@ -183,6 +205,7 @@ Denizli,7,MHP,8.5
 Denizli,7,YRP,1.4
 Denizli,7,TIP,1.1
 Denizli,7,ZAFER,2.6
+Denizli,7,BBP,1.4
 Diyarbakır,12,AKP,23.2
 Diyarbakır,12,CHP,8.2
 Diyarbakır,12,IYI,2.3
@@ -191,6 +214,7 @@ Diyarbakır,12,MHP,1.5
 Diyarbakır,12,YRP,1.6
 Diyarbakır,12,TIP,0
 Diyarbakır,12,ZAFER,0
+Diyarbakır,12,BBP,0.2
 Edirne,4,AKP,23.8
 Edirne,4,CHP,39.4
 Edirne,4,IYI,20.5
@@ -199,6 +223,7 @@ Edirne,4,MHP,7.7
 Edirne,4,YRP,0.7
 Edirne,4,TIP,1.1
 Edirne,4,ZAFER,1.5
+Edirne,4,BBP,0.2
 Elazığ,5,AKP,40.4
 Elazığ,5,CHP,20.7
 Elazığ,5,IYI,2.4
@@ -207,6 +232,7 @@ Elazığ,5,MHP,11.5
 Elazığ,5,YRP,3.6
 Elazığ,5,TIP,0
 Elazığ,5,ZAFER,0.6
+Elazığ,5,BBP,0.4
 Erzincan,2,AKP,38.7
 Erzincan,2,CHP,35.9
 Erzincan,2,IYI,0
@@ -215,6 +241,7 @@ Erzincan,2,MHP,19.6
 Erzincan,2,YRP,1.4
 Erzincan,2,TIP,0.3
 Erzincan,2,ZAFER,1
+Erzincan,2,BBP,0.4
 Erzurum,5,AKP,43.3
 Erzurum,5,CHP,7
 Erzurum,5,IYI,9.5
@@ -223,6 +250,7 @@ Erzurum,5,MHP,16.7
 Erzurum,5,YRP,4.9
 Erzurum,5,TIP,0
 Erzurum,5,ZAFER,2.4
+Erzurum,5,BBP,1.7
 Eskişehir,7,AKP,33.2
 Eskişehir,7,CHP,34.1
 Eskişehir,7,IYI,13.8
@@ -231,6 +259,7 @@ Eskişehir,7,MHP,7.3
 Eskişehir,7,YRP,1.4
 Eskişehir,7,TIP,1.7
 Eskişehir,7,ZAFER,3
+Eskişehir,7,BBP,1.1
 Gaziantep,14,AKP,44.9
 Gaziantep,14,CHP,20.4
 Gaziantep,14,IYI,5.4
@@ -239,6 +268,7 @@ Gaziantep,14,MHP,9.7
 Gaziantep,14,YRP,4.1
 Gaziantep,14,TIP,0
 Gaziantep,14,ZAFER,3.2
+Gaziantep,14,BBP,0.7
 Giresun,4,AKP,43.1
 Giresun,4,CHP,20.7
 Giresun,4,IYI,12.7
@@ -247,6 +277,7 @@ Giresun,4,MHP,15.6
 Giresun,4,YRP,2.5
 Giresun,4,TIP,0.5
 Giresun,4,ZAFER,1.5
+Giresun,4,BBP,0.6
 Gümüşhane,2,AKP,47.8
 Gümüşhane,2,CHP,0
 Gümüşhane,2,IYI,18.3
@@ -255,6 +286,7 @@ Gümüşhane,2,MHP,26.4
 Gümüşhane,2,YRP,2.7
 Gümüşhane,2,TIP,0.4
 Gümüşhane,2,ZAFER,1.1
+Gümüşhane,2,BBP,0.8
 Hakkari,3,AKP,20.6
 Hakkari,3,CHP,7.2
 Hakkari,3,IYI,0
@@ -263,6 +295,7 @@ Hakkari,3,MHP,3
 Hakkari,3,YRP,2
 Hakkari,3,TIP,0
 Hakkari,3,ZAFER,0.2
+Hakkari,3,BBP,0.3
 Hatay,10,AKP,33.9
 Hatay,10,CHP,28.4
 Hatay,10,IYI,8
@@ -271,6 +304,7 @@ Hatay,10,MHP,12.2
 Hatay,10,YRP,1.8
 Hatay,10,TIP,8.6
 Hatay,10,ZAFER,1.3
+Hatay,10,BBP,0.9
 Isparta,4,AKP,32.7
 Isparta,4,CHP,22.3
 Isparta,4,IYI,16.3
@@ -279,6 +313,7 @@ Isparta,4,MHP,20.4
 Isparta,4,YRP,1.8
 Isparta,4,TIP,0.4
 Isparta,4,ZAFER,1.9
+Isparta,4,BBP,0.5
 Mersin,13,AKP,25
 Mersin,13,CHP,30.9
 Mersin,13,IYI,11.8
@@ -287,6 +322,7 @@ Mersin,13,MHP,12
 Mersin,13,YRP,0.9
 Mersin,13,TIP,2
 Mersin,13,ZAFER,1.8
+Mersin,13,BBP,0.5
 İstanbul-1,35,AKP,34.7
 İstanbul-1,35,CHP,31.6
 İstanbul-1,35,IYI,7.7
@@ -295,6 +331,7 @@ Mersin,13,ZAFER,1.8
 İstanbul-1,35,YRP,3
 İstanbul-1,35,TIP,4.6
 İstanbul-1,35,ZAFER,2.7
+İstanbul-1,35,BBP,1
 İstanbul-2,25,AKP,38.3
 İstanbul-2,25,CHP,26.5
 İstanbul-2,25,IYI,8.6
@@ -303,6 +340,7 @@ Mersin,13,ZAFER,1.8
 İstanbul-2,25,YRP,3.8
 İstanbul-2,25,TIP,3.7
 İstanbul-2,25,ZAFER,2.8
+İstanbul-2,25,BBP,0.7
 İstanbul-3,36,AKP,35.8
 İstanbul-3,36,CHP,26.3
 İstanbul-3,36,IYI,8
@@ -311,6 +349,7 @@ Mersin,13,ZAFER,1.8
 İstanbul-3,36,YRP,3.1
 İstanbul-3,36,TIP,3.7
 İstanbul-3,36,ZAFER,2.9
+İstanbul-3,36,BBP,0.7
 İzmir-1,14,AKP,25.5
 İzmir-1,14,CHP,41.9
 İzmir-1,14,IYI,11.9
@@ -319,6 +358,7 @@ Mersin,13,ZAFER,1.8
 İzmir-1,14,YRP,0.8
 İzmir-1,14,TIP,0
 İzmir-1,14,ZAFER,2.3
+İzmir-1,14,BBP,0.5
 İzmir-2,14,AKP,25
 İzmir-2,14,CHP,40
 İzmir-2,14,IYI,10.9
@@ -327,6 +367,7 @@ Mersin,13,ZAFER,1.8
 İzmir-2,14,YRP,0.9
 İzmir-2,14,TIP,5.4
 İzmir-2,14,ZAFER,2.3
+İzmir-2,14,BBP,0.4
 Kars,3,AKP,25.8
 Kars,3,CHP,16.5
 Kars,3,IYI,14.9
@@ -335,6 +376,7 @@ Kars,3,MHP,9.7
 Kars,3,YRP,2
 Kars,3,TIP,0
 Kars,3,ZAFER,0.3
+Kars,3,BBP,0.6
 Kastamonu,3,AKP,45.5
 Kastamonu,3,CHP,21.8
 Kastamonu,3,IYI,7.6
@@ -343,6 +385,7 @@ Kastamonu,3,MHP,15
 Kastamonu,3,YRP,4
 Kastamonu,3,TIP,0
 Kastamonu,3,ZAFER,1.7
+Kastamonu,3,BBP,0.9
 Kayseri,10,AKP,40.7
 Kayseri,10,CHP,17.2
 Kayseri,10,IYI,10
@@ -351,6 +394,7 @@ Kayseri,10,MHP,19
 Kayseri,10,YRP,3.5
 Kayseri,10,TIP,0.5
 Kayseri,10,ZAFER,3.2
+Kayseri,10,BBP,1.9
 Kırklareli,3,AKP,25.3
 Kırklareli,3,CHP,45.4
 Kırklareli,3,IYI,15.2
@@ -359,6 +403,7 @@ Kırklareli,3,MHP,4.9
 Kırklareli,3,YRP,0.7
 Kırklareli,3,TIP,1.8
 Kırklareli,3,ZAFER,1.5
+Kırklareli,3,BBP,0.5
 Kırşehir,2,AKP,38.8
 Kırşehir,2,CHP,29.2
 Kırşehir,2,IYI,7.2
@@ -367,6 +412,7 @@ Kırşehir,2,MHP,14.9
 Kırşehir,2,YRP,1.6
 Kırşehir,2,TIP,0.5
 Kırşehir,2,ZAFER,1.9
+Kırşehir,2,BBP,1
 Kocaeli,14,AKP,39.7
 Kocaeli,14,CHP,24
 Kocaeli,14,IYI,9.5
@@ -375,6 +421,7 @@ Kocaeli,14,MHP,8.4
 Kocaeli,14,YRP,5.7
 Kocaeli,14,TIP,0
 Kocaeli,14,ZAFER,3.1
+Kocaeli,14,BBP,1.1
 Konya,15,AKP,47.9
 Konya,15,CHP,13.7
 Konya,15,IYI,8.7
@@ -383,6 +430,7 @@ Konya,15,MHP,14.3
 Konya,15,YRP,5.1
 Konya,15,TIP,0.4
 Konya,15,ZAFER,2.9
+Konya,15,BBP,2
 Kütahya,4,AKP,48.6
 Kütahya,4,CHP,16.8
 Kütahya,4,IYI,10.5
@@ -391,6 +439,7 @@ Kütahya,4,MHP,13
 Kütahya,4,YRP,7
 Kütahya,4,TIP,0.3
 Kütahya,4,ZAFER,1.7
+Kütahya,4,BBP,1.2
 Malatya,6,AKP,45.2
 Malatya,6,CHP,21.6
 Malatya,6,IYI,3.9
@@ -399,6 +448,7 @@ Malatya,6,MHP,12.9
 Malatya,6,YRP,9.2
 Malatya,6,TIP,0
 Malatya,6,ZAFER,1.1
+Malatya,6,BBP,1.3
 Manisa,10,AKP,31.8
 Manisa,10,CHP,29.5
 Manisa,10,IYI,11.1
@@ -407,6 +457,7 @@ Manisa,10,MHP,14.1
 Manisa,10,YRP,1.6
 Manisa,10,TIP,0
 Manisa,10,ZAFER,2.2
+Manisa,10,BBP,1.3
 Kahramanmaraş,8,AKP,47.7
 Kahramanmaraş,8,CHP,16.3
 Kahramanmaraş,8,IYI,7
@@ -415,6 +466,7 @@ Kahramanmaraş,8,MHP,16.2
 Kahramanmaraş,8,YRP,5.4
 Kahramanmaraş,8,TIP,0
 Kahramanmaraş,8,ZAFER,1.7
+Kahramanmaraş,8,BBP,1.6
 Mardin,6,AKP,25.2
 Mardin,6,CHP,7.2
 Mardin,6,IYI,1.2
@@ -423,6 +475,7 @@ Mardin,6,MHP,3.5
 Mardin,6,YRP,1.1
 Mardin,6,TIP,0
 Mardin,6,ZAFER,0.5
+Mardin,6,BBP,0.2
 Muğla,8,AKP,24.5
 Muğla,8,CHP,37.6
 Muğla,8,IYI,17
@@ -431,6 +484,7 @@ Muğla,8,MHP,6.3
 Muğla,8,YRP,0.6
 Muğla,8,TIP,5.6
 Muğla,8,ZAFER,1.7
+Muğla,8,BBP,0.3
 Muş,3,AKP,21.5
 Muş,3,CHP,0
 Muş,3,IYI,5.5
@@ -439,6 +493,7 @@ Muş,3,MHP,16.6
 Muş,3,YRP,2.9
 Muş,3,TIP,0
 Muş,3,ZAFER,0.2
+Muş,3,BBP,0.4
 Nevşehir,3,AKP,39.5
 Nevşehir,3,CHP,17.5
 Nevşehir,3,IYI,15.7
@@ -447,6 +502,7 @@ Nevşehir,3,MHP,20.3
 Nevşehir,3,YRP,2
 Nevşehir,3,TIP,0.5
 Nevşehir,3,ZAFER,1.3
+Nevşehir,3,BBP,0.9
 Niğde,3,AKP,33.9
 Niğde,3,CHP,24.1
 Niğde,3,IYI,12.2
@@ -455,6 +511,7 @@ Niğde,3,MHP,22.4
 Niğde,3,YRP,2.6
 Niğde,3,TIP,0.3
 Niğde,3,ZAFER,1.5
+Niğde,3,BBP,0.6
 Ordu,6,AKP,45.2
 Ordu,6,CHP,24.2
 Ordu,6,IYI,9.8
@@ -463,6 +520,7 @@ Ordu,6,MHP,12.7
 Ordu,6,YRP,2.3
 Ordu,6,TIP,0.4
 Ordu,6,ZAFER,1.4
+Ordu,6,BBP,0.8
 Rize,3,AKP,53.4
 Rize,3,CHP,21.5
 Rize,3,IYI,0
@@ -471,6 +529,7 @@ Rize,3,MHP,13
 Rize,3,YRP,5
 Rize,3,TIP,0.4
 Rize,3,ZAFER,1.7
+Rize,3,BBP,1.6
 Sakarya,8,AKP,47.3
 Sakarya,8,CHP,16.4
 Sakarya,8,IYI,10.9
@@ -479,6 +538,7 @@ Sakarya,8,MHP,12
 Sakarya,8,YRP,5
 Sakarya,8,TIP,0.6
 Sakarya,8,ZAFER,2.6
+Sakarya,8,BBP,0.9
 Samsun,9,AKP,42.4
 Samsun,9,CHP,19.3
 Samsun,9,IYI,12.1
@@ -487,6 +547,7 @@ Samsun,9,MHP,14.2
 Samsun,9,YRP,4
 Samsun,9,TIP,0.7
 Samsun,9,ZAFER,2.2
+Samsun,9,BBP,1.4
 Siirt,3,AKP,36
 Siirt,3,CHP,7.8
 Siirt,3,IYI,1.5
@@ -495,6 +556,7 @@ Siirt,3,MHP,3.9
 Siirt,3,YRP,1.2
 Siirt,3,TIP,0
 Siirt,3,ZAFER,0.1
+Siirt,3,BBP,0.3
 Sinop,2,AKP,42.7
 Sinop,2,CHP,25.7
 Sinop,2,IYI,9.4
@@ -503,6 +565,7 @@ Sinop,2,MHP,9.1
 Sinop,2,YRP,2.2
 Sinop,2,TIP,0.8
 Sinop,2,ZAFER,1.5
+Sinop,2,BBP,4.4
 Sivas,5,AKP,40.6
 Sivas,5,CHP,16.4
 Sivas,5,IYI,7.2
@@ -511,6 +574,7 @@ Sivas,5,MHP,18
 Sivas,5,YRP,3.4
 Sivas,5,TIP,0.5
 Sivas,5,ZAFER,1.8
+Sivas,5,BBP,10
 Tekirdağ,8,AKP,30.7
 Tekirdağ,8,CHP,36.3
 Tekirdağ,8,IYI,11.2
@@ -519,6 +583,7 @@ Tekirdağ,8,MHP,6.5
 Tekirdağ,8,YRP,1.6
 Tekirdağ,8,TIP,1.6
 Tekirdağ,8,ZAFER,2.3
+Tekirdağ,8,BBP,0.5
 Tokat,5,AKP,37.4
 Tokat,5,CHP,20.7
 Tokat,5,IYI,11
@@ -527,6 +592,7 @@ Tokat,5,MHP,22.1
 Tokat,5,YRP,2.3
 Tokat,5,TIP,0.4
 Tokat,5,ZAFER,1.4
+Tokat,5,BBP,2.8
 Trabzon,6,AKP,47.8
 Trabzon,6,CHP,18
 Trabzon,6,IYI,12.1
@@ -535,6 +601,7 @@ Trabzon,6,MHP,10.8
 Trabzon,6,YRP,4.5
 Trabzon,6,TIP,0.3
 Trabzon,6,ZAFER,1.8
+Trabzon,6,BBP,1.5
 Tunceli,2,AKP,13.2
 Tunceli,2,CHP,32
 Tunceli,2,IYI,2.3
@@ -543,6 +610,7 @@ Tunceli,2,MHP,5.6
 Tunceli,2,YRP,1
 Tunceli,2,TIP,0
 Tunceli,2,ZAFER,0.1
+Tunceli,2,BBP,0.3
 Şanlıurfa,15,AKP,43
 Şanlıurfa,15,CHP,8.1
 Şanlıurfa,15,IYI,4.6
@@ -551,6 +619,7 @@ Tunceli,2,ZAFER,0.1
 Şanlıurfa,15,YRP,2.9
 Şanlıurfa,15,TIP,0
 Şanlıurfa,15,ZAFER,0
+Şanlıurfa,15,BBP,0.4
 Uşak,3,AKP,36
 Uşak,3,CHP,29.1
 Uşak,3,IYI,17.4
@@ -559,6 +628,7 @@ Uşak,3,MHP,9.4
 Uşak,3,YRP,1.4
 Uşak,3,TIP,0.4
 Uşak,3,ZAFER,1.6
+Uşak,3,BBP,0.7
 Van,8,AKP,26.1
 Van,8,CHP,8.7
 Van,8,IYI,0
@@ -567,6 +637,7 @@ Van,8,MHP,5.1
 Van,8,YRP,3.1
 Van,8,TIP,0
 Van,8,ZAFER,0.8
+Van,8,BBP,0.8
 Yozgat,3,AKP,43.9
 Yozgat,3,CHP,0
 Yozgat,3,IYI,22.9
@@ -575,6 +646,7 @@ Yozgat,3,MHP,23.2
 Yozgat,3,YRP,4.4
 Yozgat,3,TIP,0.3
 Yozgat,3,ZAFER,1.3
+Yozgat,3,BBP,1.6
 Zonguldak,5,AKP,40
 Zonguldak,5,CHP,32.1
 Zonguldak,5,IYI,10
@@ -583,6 +655,7 @@ Zonguldak,5,MHP,8.4
 Zonguldak,5,YRP,2.5
 Zonguldak,5,TIP,0.5
 Zonguldak,5,ZAFER,1.8
+Zonguldak,5,BBP,0.8
 Aksaray,4,AKP,44.1
 Aksaray,4,CHP,0
 Aksaray,4,IYI,24.7
@@ -591,6 +664,7 @@ Aksaray,4,MHP,21
 Aksaray,4,YRP,2.6
 Aksaray,4,TIP,0.3
 Aksaray,4,ZAFER,1.3
+Aksaray,4,BBP,2.1
 Bayburt,1,AKP,59.9
 Bayburt,1,CHP,0
 Bayburt,1,IYI,16
@@ -599,6 +673,7 @@ Bayburt,1,MHP,16.6
 Bayburt,1,YRP,2.9
 Bayburt,1,TIP,0.3
 Bayburt,1,ZAFER,1.4
+Bayburt,1,BBP,0.7
 Karaman,3,AKP,41
 Karaman,3,CHP,19.3
 Karaman,3,IYI,10.9
@@ -607,6 +682,7 @@ Karaman,3,MHP,18.1
 Karaman,3,YRP,2.4
 Karaman,3,TIP,0.4
 Karaman,3,ZAFER,1.9
+Karaman,3,BBP,2.7
 Kırıkkale,3,AKP,35.7
 Kırıkkale,3,CHP,26.6
 Kırıkkale,3,IYI,10.1
@@ -615,6 +691,7 @@ Kırıkkale,3,MHP,21.2
 Kırıkkale,3,YRP,1.8
 Kırıkkale,3,TIP,0
 Kırıkkale,3,ZAFER,1.5
+Kırıkkale,3,BBP,0.7
 Batman,5,AKP,29.2
 Batman,5,CHP,8.5
 Batman,5,IYI,0
@@ -623,6 +700,7 @@ Batman,5,MHP,1.5
 Batman,5,YRP,1.1
 Batman,5,TIP,0
 Batman,5,ZAFER,0.1
+Batman,5,BBP,0.3
 Şırnak,4,AKP,21.4
 Şırnak,4,CHP,8.7
 Şırnak,4,IYI,1.2
@@ -631,6 +709,7 @@ Batman,5,ZAFER,0.1
 Şırnak,4,YRP,0.6
 Şırnak,4,TIP,0
 Şırnak,4,ZAFER,1.1
+Şırnak,4,BBP,0.2
 Bartın,2,AKP,37
 Bartın,2,CHP,31.4
 Bartın,2,IYI,0
@@ -639,6 +718,7 @@ Bartın,2,MHP,23.5
 Bartın,2,YRP,4.48
 Bartın,2,TIP,1.8
 Bartın,2,ZAFER,1.5
+Bartın,2,BBP,0.5
 Ardahan,2,AKP,35
 Ardahan,2,CHP,29.7
 Ardahan,2,IYI,4.9
@@ -647,6 +727,7 @@ Ardahan,2,MHP,3.3
 Ardahan,2,YRP,1
 Ardahan,2,TIP,0
 Ardahan,2,ZAFER,1.1
+Ardahan,2,BBP,0.4
 Iğdır,2,AKP,35.3
 Iğdır,2,CHP,6.6
 Iğdır,2,IYI,6.6
@@ -655,6 +736,7 @@ Iğdır,2,MHP,4.8
 Iğdır,2,YRP,0.5
 Iğdır,2,TIP,0
 Iğdır,2,ZAFER,0.2
+Iğdır,2,BBP,0.2
 Yalova,3,AKP,34.3
 Yalova,3,CHP,28.7
 Yalova,3,IYI,9.5
@@ -663,6 +745,7 @@ Yalova,3,MHP,11.4
 Yalova,3,YRP,2.1
 Yalova,3,TIP,1.1
 Yalova,3,ZAFER,2.3
+Yalova,3,BBP,0.6
 Karabük,2,AKP,37.7
 Karabük,2,CHP,22
 Karabük,2,IYI,9.6
@@ -671,6 +754,7 @@ Karabük,2,MHP,16
 Karabük,2,YRP,8.2
 Karabük,2,TIP,0.4
 Karabük,2,ZAFER,2.1
+Karabük,2,BBP,0.4
 Kilis,2,AKP,39.7
 Kilis,2,CHP,20.2
 Kilis,2,IYI,5.7
@@ -679,6 +763,7 @@ Kilis,2,MHP,26.8
 Kilis,2,YRP,2.3
 Kilis,2,TIP,0
 Kilis,2,ZAFER,1.9
+Kilis,2,BBP,0.4
 Osmaniye,4,AKP,33.2
 Osmaniye,4,CHP,17.3
 Osmaniye,4,IYI,12.6
@@ -687,6 +772,7 @@ Osmaniye,4,MHP,28.5
 Osmaniye,4,YRP,2
 Osmaniye,4,TIP,0.4
 Osmaniye,4,ZAFER,1.7
+Osmaniye,4,BBP,0.6
 Düzce,3,AKP,49.6
 Düzce,3,CHP,22.4
 Düzce,3,IYI,0
@@ -695,3 +781,4 @@ Düzce,3,MHP,16.1
 Düzce,3,YRP,3.8
 Düzce,3,TIP,0.5
 Düzce,3,ZAFER,2.1
+Düzce,3,BBP,0.9
