@@ -399,10 +399,37 @@ def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, d
 # ==========================================
 st.title("AD Türkiye Genel Seçim Projeksiyonu")
 
-st.sidebar.header("Seçim Parametreleri")
-threshold_input = st.sidebar.number_input("Ülke Barajı (%)", min_value=0.0, max_value=15.0, value=7.0, step=0.5)
+# --- 1. SIRA: OY GİRİŞİ (EN YUKARI ALINDI) ---
+st.sidebar.header("Ulusal Oy Oranları")
+
+custom_start_values = {
+    'AKP': 27.4, 'CHP': 1.0, 'MHP': 5.4, 'DEM': 7.6, 
+    'IYI': 5.1, 'YRP': 3.8, 'ZAFER': 2.9, 'TIP': 1.1, 
+    'YENI': 38.3, 'A': 4.5, 'BBP': 0.9, 'SAADET': 1.1
+}
+
+user_inputs = {}
+total_input = 0
+for p in PARTIES:
+    varsayilan_oy = custom_start_values.get(p, float(base_national_dict.get(p, 0)))
+    val = st.sidebar.number_input(f"{p} (%)", min_value=0.0, max_value=100.0, value=varsayilan_oy, step=0.1)
+    user_inputs[p] = val
+    total_input += val
+
+if abs(total_input - 100.0) > 0.1:
+    st.sidebar.warning(f"Toplam oy %{total_input:.1f}. Oylar %100'e normalize ediliyor.")
+
+user_inputs_norm = {p: (v / total_input) * 100 if total_input > 0 else 0 for p, v in user_inputs.items()}
+
 st.sidebar.divider()
 
+# --- 2. SIRA: SEÇİM PARAMETRELERİ (BARAJ) ---
+st.sidebar.subheader("Seçim Parametreleri")
+threshold_input = st.sidebar.number_input("Ülke Barajı (%)", min_value=0.0, max_value=15.0, value=7.0, step=0.5)
+
+st.sidebar.divider()
+
+# --- 3. SIRA: İTTİFAK SEÇENEKLERİ ---
 st.sidebar.subheader("İttifak Seçenekleri")
 use_alliances = st.sidebar.checkbox("İttifak Sistemini Etkinleştir", value=True)
 
@@ -411,7 +438,7 @@ if use_alliances:
     st.sidebar.markdown("**Ön Tanımlı İttifaklar:**")
     enable_cumhur = st.sidebar.checkbox("Cumhur İttifakı", value=True)
     if enable_cumhur:
-        default_cumhur = [p for p in ['AKP', 'MHP', 'BBP'] if p in PARTIES]
+        default_cumhur = [p for p in ['AKP', 'MHP'] if p in PARTIES]
         cumhur_parties = st.sidebar.multiselect("Cumhur İttifakı Üyeleri", PARTIES, default=default_cumhur, key="cumhur_parties")
         if cumhur_parties: alliances["Cumhur İttifakı"] = cumhur_parties
             
@@ -429,28 +456,7 @@ if use_alliances:
     if custom_aly_name and custom_aly_parties:
         alliances[custom_aly_name] = custom_aly_parties
 
-st.sidebar.divider()
-st.sidebar.markdown("**Ulusal Oy Oranları**")
-
-custom_start_values = {
-    'AKP': 27.4, 'CHP': 1.0, 'MHP': 5.4, 'DEM': 7.6, 
-    'IYI': 5.1, 'YRP': 3.8, 'ZAFER': 2.9, 'TIP': 1.1,
-    'YENI': 38.3, 'A': 4.5, 'BBP': 0.9, 'SAADET': 1.1
-}
-
-user_inputs = {}
-total_input = 0
-for p in PARTIES:
-    varsayilan_oy = custom_start_values.get(p, float(base_national_dict.get(p, 0)))
-    val = st.sidebar.number_input(f"{p} (%)", min_value=0.0, max_value=100.0, value=varsayilan_oy, step=0.1)
-    user_inputs[p] = val
-    total_input += val
-
-if abs(total_input - 100.0) > 0.1:
-    st.sidebar.warning(f"Toplam oy %{total_input:.1f}. Oylar %100'e normalize ediliyor.")
-
-user_inputs_norm = {p: (v / total_input) * 100 if total_input > 0 else 0 for p, v in user_inputs.items()}
-
+# --- BÜTÜN GİRİŞLER TAMAMLANDIKTAN SONRA SİMÜLASYONU ÇALIŞTIR ---
 df_results = run_simulation(df_base, base_national_dict, user_inputs_norm, alliances, threshold=threshold_input)
 
 # --- DETAYLI ULUSAL ÖZET TABLOSU ---
