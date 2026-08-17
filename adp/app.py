@@ -28,7 +28,11 @@ def normalize_id(text):
 @st.cache_data
 def load_base_data():
     try:
-        df = pd.read_csv("ysk_2023_secim_verisi.csv")
+        # app.py dosyasının bulunduğu klasörün yolunu tam olarak alır
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(current_dir, "ysk_2023_secim_verisi.csv")
+        
+        df = pd.read_csv(file_path)
         
         if 'DIGER' in df['party'].values:
             df = df[df['party'] != 'DIGER']
