@@ -10,27 +10,23 @@ import plotly.graph_objects as go
 # ==========================================
 st.set_page_config(page_title="AD Projeksiyon", layout="wide")
 
-# --- 1. LOGO ENTEGRASYONU (Güvenli Mutlak Yol Tespiti) ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
 logo_path = os.path.join(current_dir, "logo.svg")
 
 if os.path.exists(logo_path):
     st.sidebar.image(logo_path, use_container_width=True)
 else:
-    # Dosya sunucuda o an okunamazsa uygulamanın çökmesini engeller
     st.sidebar.markdown("### AD PROJEKSİYON")
 
 st.sidebar.write("")
-# Kullanıcının anında değiştirebileceği Tema Anahtarı
 is_light_mode = st.sidebar.toggle("🌞 Açık Tema (Light Mode)", value=False)
 
-# 1. HİBRİT TEMA DEĞİŞKENLERİ (Arka planlar ve yan menü eşitlendi)
 if is_light_mode:
-    c_bg = "#f8f9fa"          # Ana Arka Plan ve Sidebar Rengi
-    c_text = "#181720"        # Metinler (Koyu Kömür)
-    c_border = "#181720"      # Çerçeveler
-    t_seat_bg = "#181720"     # Vekil Kutusu Arka Planı
-    t_bar_bg = "#e9ecef"      # Oy Oranı Boş Çubuğu
+    c_bg = "#f8f9fa"          
+    c_text = "#181720"        
+    c_border = "#181720"      
+    t_seat_bg = "#181720"     
+    t_bar_bg = "#e9ecef"      
     sidebar_input_bg = "#ffffff"
     sidebar_input_border = "#cccccc"
 else:
@@ -42,19 +38,16 @@ else:
     sidebar_input_bg = "#23222d"
     sidebar_input_border = "#444444"
 
-# 2. GÜNCELLENMİŞ CSS ENJEKSİYONU (Gölgeler kaldırıldı, arka planlar birleştirildi)
 custom_theme_css = f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&display=swap');
 
-    /* --- ANA EKRAN VE GENEL AYARLAR --- */
     .stApp {{
         background-color: {c_bg};
         transition: background-color 0.3s;
         font-family: 'Space Grotesk', sans-serif;
     }}
     
-    /* Başlıklar (Gölgeler tamamen kaldırıldı, düz ve net hatlar) */
     [data-testid="stAppViewContainer"] h1, 
     [data-testid="stAppViewContainer"] h2, 
     [data-testid="stAppViewContainer"] h3 {{
@@ -73,7 +66,6 @@ custom_theme_css = f"""
         color: {c_text} !important;
     }}
 
-    /* --- YAN MENÜ (SİDEBAR) - ARKA PLAN ANA EKRANLA BİRLEŞTİRİLDİ --- */
     section[data-testid="stSidebar"] {{
         background-color: {c_bg} !important;
         border-right: 1px solid {c_border} !important;
@@ -112,7 +104,6 @@ custom_theme_css = f"""
         box-shadow: 0 0 0 1px #eb252d !important;
     }}
 
-    /* --- DİĞER BİLEŞENLER --- */
     hr {{
         border-color: #eb252d !important;
         border-width: 1px !important;
@@ -164,6 +155,26 @@ def load_base_data():
             df = df[df['party'] != 'DIGER']
             df['base_vote_pct'] = df.groupby('district')['base_vote_pct'].transform(lambda x: (x / x.sum()) * 100)
 
+        pivot_base = df.pivot(index='district', columns='party', values='base_vote_pct').fillna(0)
+        
+        new_rows = []
+        for district, row_data in df.groupby('district'):
+            seat_count = row_data['seat_count'].iloc[0]
+            
+            # YENİ: %87.5 CHP + %12.5 İYİ
+            if 'CHP' in pivot_base.columns and 'IYI' in pivot_base.columns:
+                yp_vote = (pivot_base.loc[district, 'CHP'] * 0.875) + (pivot_base.loc[district, 'IYI'] * 0.125)
+                new_rows.append({'district': district, 'party': 'YENI', 'base_vote_pct': yp_vote, 'seat_count': seat_count})
+            
+            # A Partisi: %50 AKP + %30 İYİ + %20 MHP
+            if all(col in pivot_base.columns for col in ['AKP', 'IYI', 'MHP']):
+                a_vote = (pivot_base.loc[district, 'AKP'] * 0.50) + (pivot_base.loc[district, 'IYI'] * 0.30) + (pivot_base.loc[district, 'MHP'] * 0.20)
+                new_rows.append({'district': district, 'party': 'A', 'base_vote_pct': a_vote, 'seat_count': seat_count})
+        
+        if new_rows:
+            df_synth = pd.DataFrame(new_rows)
+            df = pd.concat([df, df_synth], ignore_index=True)
+
         df['weighted_vote'] = df['base_vote_pct'] * df['seat_count']
         national_totals = df.groupby('party')['weighted_vote'].sum()
         total_seats = df.groupby('district')['seat_count'].first().sum()
@@ -178,8 +189,16 @@ def load_base_data():
 
 df_base, base_national_dict = load_base_data()
 
-PARTIES = ['AKP', 'CHP', 'IYI', 'DEM', 'MHP', 'YRP', 'TIP', 'ZAFER']
+# Tüm partiler eksiksiz tanımlandı
+PARTIES = ['AKP', 'CHP', 'IYI', 'DEM', 'MHP', 'YRP', 'TIP', 'ZAFER', 'YENI', 'A']
 PARTIES = [p for p in PARTIES if p in base_national_dict]
+
+party_colors = {
+    'AKP': '#FDA000', 'CHP': '#3485fd', 'MHP': '#137BBB', 
+    'DEM': '#90268F', 'IYI': '#FFC107', 'YRP': '#009840', 
+    'TIP': '#FF1D25', 'ZAFER': '#474647', 'YENI': '#A7050E',
+    'A': '#20379f',
+}
 
 # ==========================================
 # 2. HESAPLAMA MOTORU (D'Hondt & Baraj)
@@ -239,7 +258,7 @@ def run_simulation(base_df, base_nat, user_nat, alliances, threshold=7.0):
     return pd.DataFrame(results)
 
 # ==========================================
-# 3. SVG HARİTA MOTORU (Izgara Matris & Metropol Ölçeklendirmesi)
+# 3. SVG HARİTA MOTORU
 # ==========================================
 def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, district_seats_data, svg_file_name="turkiye.svg"):
     try:
@@ -250,56 +269,33 @@ def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, d
             soup = BeautifulSoup(f.read(), 'html.parser')
             
         svg_tag = soup.find('svg') or soup.find('svg:svg')
-        
         if svg_tag:
             svg_tag['width'] = "100%"
             svg_tag['height'] = "100%"
             
         paths = soup.find_all('path')
         badges_group = soup.new_tag('g', id='district-badges')
-        
         placed_badges = set()
         
-        # --- SORUNLU İLLER İÇİN MANUEL MÜDAHALE ---
         custom_positions = {
-            'kars': (1935, 260),
-            'tunceli': (1520, 460),
-            'karaman': (830, 750),
-            'ankara1': (750, 410),
-            'konya': (730, 620),
-            'izmir2': (80, 500),
-            'elazig': (1510, 535),
-            'malatya': (1350, 540),
-            'afyonkarahisar': (510, 525),
-            'erzincan': (1510, 370),
-            'burdur': (455, 705),
-            'bursa2': (390, 260),
-            'bursa1': (310, 310),
-            'ordu': (1310, 190),
-            'adana': (1060, 740),
-            'giresun': (1415, 210),
-            'osmaniye': (1155, 745),
-            'ankara3': (690, 300),
-            'ankara2': (790, 300),
-            'agri': (1925, 375),
-            'kayseri': (1100, 525),
-            'sakarya': (510, 215),
-            'gaziantep': (1300, 760),
-            'denizli': (370, 670),
+            'kars': (1935, 260), 'tunceli': (1520, 460), 'karaman': (830, 750),
+            'ankara1': (750, 410), 'konya': (730, 620), 'izmir2': (80, 500),
+            'elazig': (1510, 535), 'malatya': (1350, 540), 'afyonkarahisar': (510, 525),
+            'erzincan': (1510, 370), 'burdur': (455, 705), 'bursa2': (390, 260),
+            'bursa1': (310, 310), 'ordu': (1310, 190), 'adana': (1060, 740),
+            'giresun': (1415, 210), 'osmaniye': (1155, 745), 'ankara3': (690, 300),
+            'ankara2': (790, 300), 'agri': (1925, 375), 'kayseri': (1100, 525),
+            'sakarya': (510, 215), 'gaziantep': (1300, 760), 'denizli': (370, 670),
         }
         
         for path in paths:
             raw_id = path.get('id') or path.get('name') or path.get('data-name') or path.get('title') or ""
             svg_id_norm = normalize_id(raw_id)
-            
-            if not svg_id_norm:
-                continue
+            if not svg_id_norm: continue
                 
             winning_party = dist_winners.get(svg_id_norm) or prov_winners.get(svg_id_norm)
-                
             if winning_party:
                 color = party_colors.get(winning_party, "#CCCCCC")
-                
                 if 'style' in path.attrs:
                     style_str = path['style']
                     style_dict = {item.split(':')[0].strip(): item.split(':')[1].strip() for item in style_str.split(';') if ':' in item}
@@ -314,50 +310,37 @@ def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, d
                 
                 if svg_id_norm not in placed_badges:
                     placed_badges.add(svg_id_norm)
-                    
                     parties_won_in_prov = {}
                     for (dist_name, party), seats in district_seats_data.items():
                         dist_str = str(dist_name)
                         dist_norm = normalize_id(dist_str.split('-')[0] if '-' in dist_str else dist_str)
-                        
                         if dist_norm == svg_id_norm or normalize_id(dist_str) == svg_id_norm:
                             if seats > 0:
                                 parties_won_in_prov[party] = parties_won_in_prov.get(party, 0) + int(seats)
                                 
                     sorted_winners = sorted(parties_won_in_prov.items(), key=lambda x: x[1], reverse=True)
-                    
                     if sorted_winners:
                         man_x, man_y = custom_positions.get(svg_id_norm, ("", ""))
-                        
                         city_badge_g = soup.new_tag('g', **{
-                            'class': 'badge-group', 
-                            'data-path-id': svg_id_norm,
-                            'data-manual-x': str(man_x),
-                            'data-manual-y': str(man_y)
+                            'class': 'badge-group', 'data-path-id': svg_id_norm,
+                            'data-manual-x': str(man_x), 'data-manual-y': str(man_y)
                         })
                         
-                        # --- METROPOL TESPİTİ VE ÖLÇEKLENDİRME ---
                         is_metro = any(m in svg_id_norm for m in ['istanbul'])
-                        
-                        # Metropollerde daha küçük, diğer illerde standart boyut
                         r_val = '9.5' if is_metro else '15'
                         f_size = '9px' if is_metro else '16px'
                         y_offset = 3 if is_metro else 4.5
                         spacing_x = 21 if is_metro else 32
                         spacing_y = 21 if is_metro else 32
                         
-                        # --- IZGARA (GRID) DİZİLİM MANTIĞI ---
                         cols = 2 if len(sorted_winners) > 2 else len(sorted_winners)
                         rows = (len(sorted_winners) + cols - 1) // cols
                         base_start_y = -((rows - 1) * spacing_y) / 2
                         
                         for i, (party_name, seat_num) in enumerate(sorted_winners):
                             p_color = party_colors.get(party_name, '#333333')
-                            
                             row_idx = i // cols
                             col_idx = i % cols
-                            
-                            # O satırda kaç rozet olduğunu bulup merkezliyoruz (Örn: Alt satırda 1 rozet varsa tam ortaya koy)
                             items_in_this_row = cols if row_idx < rows - 1 else (len(sorted_winners) - (rows - 1) * cols)
                             start_x = -((items_in_this_row - 1) * spacing_x) / 2
                             
@@ -368,81 +351,21 @@ def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, d
                             city_badge_g.append(circle)
                             
                             text = soup.new_tag('text', x=str(current_x), y=str(current_y + y_offset), **{
-                                'text-anchor': 'middle',
-                                'fill': '#ffffff',
-                                'font-size': f_size,
-                                'font-family': 'Segoe UI, sans-serif',
-                                'font-weight': 'bold',
-                                'pointer-events': 'none'
+                                'text-anchor': 'middle', 'fill': '#ffffff', 'font-size': f_size,
+                                'font-family': 'Segoe UI, sans-serif', 'font-weight': 'bold', 'pointer-events': 'none'
                             })
                             text.string = str(seat_num)
                             city_badge_g.append(text)
                             
                         badges_group.append(city_badge_g)
                         
-        if badges_group:
-            svg_tag.append(badges_group)
+        if badges_group: svg_tag.append(badges_group)
                 
         css_style = "<style>body{margin:0;background-color:transparent;display:flex;justify-content:center;}.map-container{position:relative;width:100%;max-width:950px;min-height:550px;display:flex;justify-content:center;}.map-path{cursor:pointer;transition:opacity 0.2s;}.map-path:hover{opacity:0.8;stroke:#000;stroke-width:2px;}#svg-tooltip{position:absolute;display:none;background:white;border:1px solid #ccc;padding:10px 14px;box-shadow:0 4px 15px rgba(0,0,0,0.2);border-radius:6px;pointer-events:none;z-index:9999;font-family:'Segoe UI', Tahoma, sans-serif;font-size:13px;color:#333;min-width:190px;}.tip-header{font-weight:bold;font-size:14px;margin-bottom:6px;border-bottom:1px solid #eee;padding-bottom:4px;color:#111;}.tip-row{display:flex;align-items:center;margin-bottom:3px;}.tip-party{width:50px;font-weight:600;color:#333;}.tip-seat{background:#111;color:#fff;width:24px;text-align:center;font-weight:bold;font-size:11px;margin-right:6px;}.tip-bar-bg{flex-grow:1;background:#eee;height:12px;border-radius:2px;overflow:hidden;}.tip-bar-fill{height:100%;}.tip-pct{margin-left:6px;font-size:11px;color:#666;width:45px;text-align:right;} .badge-group { transition: transform 0.5s ease; opacity: 0; animation: fadeIn 0.5s forwards 0.2s; } @keyframes fadeIn { to { opacity: 1; } }</style>"
-        
-        js_script = """
-        <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                const paths = document.querySelectorAll('.map-path');
-                const tooltip = document.getElementById('svg-tooltip');
-                const wrapper = document.getElementById('map-wrapper');
-
-                paths.forEach(path => {
-                    path.addEventListener('mousemove', (e) => {
-                        const tooltipData = path.getAttribute('data-tooltip');
-                        if(tooltipData){
-                            tooltip.innerHTML = tooltipData;
-                            tooltip.style.display = 'block';
-                            const rect = wrapper.getBoundingClientRect();
-                            const tipRect = tooltip.getBoundingClientRect();
-                            let x = e.clientX - rect.left + 15;
-                            let y = e.clientY - rect.top + 15;
-                            if(e.clientX - rect.left + tipRect.width + 25 > rect.width){ x = e.clientX - rect.left - tipRect.width - 15; }
-                            if(e.clientY - rect.top + tipRect.height + 25 > rect.height){ y = e.clientY - rect.top - tipRect.height - 15; }
-                            tooltip.style.left = x + 'px';
-                            tooltip.style.top = y + 'px';
-                        }
-                    });
-                    path.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
-                });
-
-                setTimeout(() => {
-                    const badgeGroups = document.querySelectorAll('.badge-group');
-                    badgeGroups.forEach(bg => {
-                        const manualX = bg.getAttribute('data-manual-x');
-                        const manualY = bg.getAttribute('data-manual-y');
-                        
-                        if (manualX && manualY) {
-                            bg.setAttribute('transform', `translate(${manualX}, ${manualY})`);
-                        } else {
-                            const pathId = bg.getAttribute('data-path-id');
-                            const targetPath = document.querySelector(`.map-path[data-norm-id="${pathId}"]`);
-                            
-                            if (targetPath) {
-                                const bbox = targetPath.getBBox();
-                                if(bbox.width > 0 && bbox.height > 0) {
-                                    const centerX = bbox.x + (bbox.width / 2);
-                                    const centerY = bbox.y + (bbox.height / 2);
-                                    bg.setAttribute('transform', `translate(${centerX}, ${centerY})`);
-                                }
-                            }
-                        }
-                    });
-                }, 100); 
-            });
-        </script>
-        """
+        js_script = "<script>document.addEventListener(\"DOMContentLoaded\", function() { const paths = document.querySelectorAll('.map-path'); const tooltip = document.getElementById('svg-tooltip'); const wrapper = document.getElementById('map-wrapper'); paths.forEach(path => { path.addEventListener('mousemove', (e) => { const tooltipData = path.getAttribute('data-tooltip'); if(tooltipData){ tooltip.innerHTML = tooltipData; tooltip.style.display = 'block'; const rect = wrapper.getBoundingClientRect(); const tipRect = tooltip.getBoundingClientRect(); let x = e.clientX - rect.left + 15; let y = e.clientY - rect.top + 15; if(e.clientX - rect.left + tipRect.width + 25 > rect.width){ x = e.clientX - rect.left - tipRect.width - 15; } if(e.clientY - rect.top + tipRect.height + 25 > rect.height){ y = e.clientY - rect.top - tipRect.height - 15; } tooltip.style.left = x + 'px'; tooltip.style.top = y + 'px'; } }); path.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; }); }); setTimeout(() => { const badgeGroups = document.querySelectorAll('.badge-group'); badgeGroups.forEach(bg => { const manualX = bg.getAttribute('data-manual-x'); const manualY = bg.getAttribute('data-manual-y'); if (manualX && manualY) { bg.setAttribute('transform', `translate(${manualX}, ${manualY})`); } else { const pathId = bg.getAttribute('data-path-id'); const targetPath = document.querySelector(`.map-path[data-norm-id=\"${pathId}\"]`); if (targetPath) { const bbox = targetPath.getBBox(); if(bbox.width > 0 && bbox.height > 0) { const centerX = bbox.x + (bbox.width / 2); const centerY = bbox.y + (bbox.height / 2); bg.setAttribute('transform', `translate(${centerX}, ${centerY})`); } } } }); }, 100); });</script>"
 
         complete_html = f"<!DOCTYPE html><html><head>{css_style}</head><body><div class='map-container' id='map-wrapper'><div id='svg-tooltip'></div>{str(svg_tag)}</div>{js_script}</body></html>"
         return complete_html
-        
-    except FileNotFoundError:
-        return f"<div style='color:red;'><b>HATA:</b> '{svg_file_name}' dosyası bulunamadı!</div>"
     except Exception as e:
         return f"<div style='color:red;'>SVG Hatası: {str(e)}</div>"
 
@@ -452,7 +375,6 @@ def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, d
 st.title("AD Türkiye Genel Seçim Projeksiyonu")
 
 st.sidebar.header("Seçim Parametreleri")
-
 threshold_input = st.sidebar.number_input("Ülke Barajı (%)", min_value=0.0, max_value=15.0, value=7.0, step=0.5)
 st.sidebar.divider()
 
@@ -462,29 +384,23 @@ use_alliances = st.sidebar.checkbox("İttifak Sistemini Etkinleştir", value=Tru
 alliances = {}
 if use_alliances:
     st.sidebar.markdown("**Ön Tanımlı İttifaklar:**")
-    
     enable_cumhur = st.sidebar.checkbox("Cumhur İttifakı", value=True)
     if enable_cumhur:
         default_cumhur = [p for p in ['AKP', 'MHP'] if p in PARTIES]
         cumhur_parties = st.sidebar.multiselect("Cumhur İttifakı Üyeleri", PARTIES, default=default_cumhur, key="cumhur_parties")
-        if cumhur_parties:
-            alliances["Cumhur İttifakı"] = cumhur_parties
+        if cumhur_parties: alliances["Cumhur İttifakı"] = cumhur_parties
             
     enable_emek = st.sidebar.checkbox("Emek ve Özgürlük İttifakı", value=True)
     if enable_emek:
         default_emek = [p for p in ['DEM', 'TIP'] if p in PARTIES]
         emek_parties = st.sidebar.multiselect("Emek ve Özgürlük İttifakı Üyeleri", PARTIES, default=default_emek, key="emek_parties")
-        if emek_parties:
-            alliances["Emek ve Özgürlük İttifakı"] = emek_parties
+        if emek_parties: alliances["Emek ve Özgürlük İttifakı"] = emek_parties
         
     st.sidebar.markdown("**Özel İttifak Ekle:**")
     custom_aly_name = st.sidebar.text_input("İttifak Adı", placeholder="Örn: Alternatif Blok")
-    
     assigned_parties = [p for parties in alliances.values() for p in parties]
     available_parties_for_custom = [p for p in PARTIES if p not in assigned_parties]
-    
     custom_aly_parties = st.sidebar.multiselect("İttifak Üyesi Partiler", available_parties_for_custom, key="custom_aly_parties")
-    
     if custom_aly_name and custom_aly_parties:
         alliances[custom_aly_name] = custom_aly_parties
 
@@ -492,8 +408,8 @@ st.sidebar.divider()
 st.sidebar.markdown("**Ulusal Oy Oranları**")
 
 custom_start_values = {
-    'AKP': 29.0, 'CHP': 39.0, 'MHP': 7.0, 'DEM': 8.0, 
-    'IYI': 5.0, 'YRP': 4.0, 'ZAFER': 3.0, 'TIP': 2.0
+    'AKP': 29.0, 'CHP': 1.0, 'MHP': 7.0, 'DEM': 8.0, 
+    'IYI': 3.0, 'YRP': 4.0, 'ZAFER': 3.0, 'TIP': 2.0, 'YENI': 37.0, 'A': 4.0
 }
 
 user_inputs = {}
@@ -521,50 +437,34 @@ for p in PARTIES:
         'Vekil': int(seats)
     })
 
-national_summary_df = pd.DataFrame(summary_data).sort_values(by=['Vekil', 'Normalize Oy (%)'], ascending=[False, False])
+# Ülke geneli oy oranına göre büyükten küçüğe kusursuz sıralama
+national_summary_df = pd.DataFrame(summary_data).sort_values(by=['Normalize Oy (%)', 'Vekil'], ascending=[False, False])
 
-party_colors = {
-    'AKP': '#FDA000', 'CHP': '#A7050E', 'MHP': '#137BBB', 
-    'DEM': '#90268F', 'IYI': '#FFC107', 'YRP': '#009840', 
-    'TIP': '#FF1D25', 'ZAFER': '#474647'
-}
+st.subheader("TBMM Sandalye Dağılımı ve Oy Oranları")
 
-st.subheader(f"TBMM Sandalye Dağılımı ve Oy Oranları")
-
-# --- SÜTUNLARI OLUŞTUR: SOLDA TABLO, SAĞDA GRAFİK ---
 col1, col2 = st.columns([1.5, 1])
 
 with col1:
-    # 1. Tabloyu vekil sayısına değil, oy oranına (Normalize Oy (%)) göre büyükten küçüğe sıralıyoruz
-    sorted_summary_df = national_summary_df.sort_values(by='Normalize Oy (%)', ascending=False)
-    
-    # 2. Orantılama için tablodaki en yüksek oy oranını buluyoruz (En yüksek oy = %100 dolu bar)
-    max_vote_pct = sorted_summary_df['Normalize Oy (%)'].max()
-    if max_vote_pct == 0:
-        max_vote_pct = 1.0 # Sıfıra bölünme hatasını önlemek için güvenli sınır
+    max_vote_pct = national_summary_df['Normalize Oy (%)'].max()
+    if max_vote_pct == 0: max_vote_pct = 1.0
 
     html_blocks = [f"""
     <style>
     .custom-row {{ display: flex; align-items: center; margin-bottom: 8px; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; }}
-    
     .custom-party {{ width: 110px; text-align: right; padding-right: 12px; font-weight: 900; color: {c_text}; font-size: 16px; text-transform: uppercase; }}
-    
     .custom-seat {{ background-color: {t_seat_bg}; color: #ffffff !important; font-weight: bold; width: 45px; text-align: center; padding: 6px 0; font-size: 15px; margin-right: 10px; border: 2px solid {c_text}; box-shadow: 3px 3px 0px #eb252d; }}
-    
     .custom-bar-bg {{ flex-grow: 1; background-color: {t_bar_bg}; height: 36px; overflow: hidden; display: flex; border: 2px solid {c_text}; box-shadow: 3px 3px 0px #eb252d; }}
-    
     .custom-bar-fill {{ height: 100%; display: flex; align-items: center; padding-left: 8px; color: #ffffff !important; font-weight: 700; font-size: 14px; white-space: nowrap; border-right: 2px solid {c_text}; }}
     </style>
     <div style="max-width: 100%; margin: 10px 0 10px 0;">
     """]
 
-    for index, row in sorted_summary_df.iterrows():
+    # Zaten national_summary_df yukarıda sıralandığı için doğrudan basıyoruz
+    for index, row in national_summary_df.iterrows():
         party = row['Parti']
         seats = int(row['Vekil'])
         vote_pct = row['Normalize Oy (%)']
         color = party_colors.get(party, "#888888")
-        
-        # Çubuğun doluluk oranı, en yüksek oy alan partiye göre orantılanıyor (Max oy = %100 genişlik)
         relative_width = (vote_pct / max_vote_pct) * 100
         
         html_blocks.append(f'<div class="custom-row"><div class="custom-party">{party}</div><div class="custom-seat">{seats}</div><div class="custom-bar-bg"><div class="custom-bar-fill" style="width: {relative_width}%; background-color: {color}; min-width: 60px;">%{vote_pct:.2f}</div></div></div>')
@@ -573,16 +473,13 @@ with col1:
     st.markdown("".join(html_blocks), unsafe_allow_html=True)
 
 with col2:
-    # --- YARIM AY (SEMI-DONUT) MECLİS GRAFİĞİ ---
     df_plot = national_summary_df[national_summary_df['Vekil'] > 0].copy()
     toplam_vekil = df_plot['Vekil'].sum()
 
-    istenen_sira = ['TIP', 'DEM', 'CHP', 'IYI', 'ZAFER', 'AKP', 'MHP', 'YRP']
-    
+    istenen_sira = ['TIP', 'DEM', 'CHP', 'YENI', 'IYI', 'ZAFER', 'A', 'AKP', 'MHP', 'YRP']
     sirali_partiler = [p for p in istenen_sira if p in df_plot['Parti'].values]
     for p in df_plot['Parti'].values:
-        if p not in sirali_partiler:
-            sirali_partiler.append(p)
+        if p not in sirali_partiler: sirali_partiler.append(p)
 
     ordered_values = [df_plot[df_plot['Parti'] == p]['Vekil'].values[0] for p in sirali_partiler]
     ordered_colors = [party_colors.get(p, "#888888") for p in sirali_partiler]
@@ -590,38 +487,19 @@ with col2:
     labels = sirali_partiler + ["Gizli_Yari"]
     values = ordered_values + [toplam_vekil]
     colors = ordered_colors + ["rgba(0,0,0,0)"]
-
     line_widths = [2] * len(sirali_partiler) + [0]
 
     fig = go.Figure(data=[go.Pie(
-        labels=labels,
-        values=values,
-        hole=0.55,
-        rotation=-90,             
-        direction="clockwise",
-        sort=False,               
-        marker=dict(colors=colors, line=dict(color=c_bg, width=line_widths)), # Çizgi rengi de dinamik
-        textinfo='label+value',
-        textposition='inside',
-        insidetextorientation='horizontal',
-        hoverinfo='none'          
+        labels=labels, values=values, hole=0.55, rotation=-90, direction="clockwise", sort=False,
+        marker=dict(colors=colors, line=dict(color=c_bg, width=line_widths)),
+        textinfo='label+value', textposition='inside', insidetextorientation='horizontal', hoverinfo='none'
     )])
 
     fig.update_layout(
-        showlegend=False,
-        margin=dict(t=0, b=0, l=0, r=0),
-        height=320,
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        annotations=[dict(
-            text=f"<b><span style='font-size:34px; color:{c_text}'>{toplam_vekil}</span></b>", 
-            x=0.5, 
-            y=0.5,            
-            yanchor='bottom', 
-            showarrow=False 
-        )]
+        showlegend=False, margin=dict(t=0, b=0, l=0, r=0), height=320,
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        annotations=[dict(text=f"<b><span style='font-size:34px; color:{c_text}'>{toplam_vekil}</span></b>", x=0.5, y=0.5, yanchor='bottom', showarrow=False)]
     )
-
     fig.update_traces(texttemplate="%{label}<br>%{value}", selector=dict(type='pie'))
     fig.data[0].texttemplate = [f"{l}<br>{v}" for l, v in zip(sirali_partiler, ordered_values)] + [""]
 
@@ -631,7 +509,6 @@ st.divider()
 
 # --- SVG HARİTA BÖLÜMÜ ---
 st.subheader("İl Haritası")
-
 province_summary = df_results.groupby(['province', 'party'])['new_vote_pct'].mean().reset_index()
 first_parties_prov = province_summary.loc[province_summary.groupby('province')['new_vote_pct'].idxmax()]
 prov_winners_dict = {normalize_id(row['province']): row['party'] for _, row in first_parties_prov.iterrows()}
@@ -640,7 +517,6 @@ first_parties_dist = df_results.loc[df_results.groupby('district')['new_vote_pct
 dist_winners_dict = {normalize_id(row['district']): row['party'] for _, row in first_parties_dist.iterrows()}
 
 tooltip_dict = {}
-
 def create_tooltip_html(title_str, group_data):
     sorted_g = group_data.sort_values(by='new_vote_pct', ascending=False).head(5)
     html = f'<div class="tip-header">{title_str}</div>'
@@ -661,24 +537,14 @@ def create_tooltip_html(title_str, group_data):
     return html
 
 for dist, group in df_results.groupby('district'):
-    dist_norm = normalize_id(dist)
-    tooltip_dict[dist_norm] = create_tooltip_html(f"📌 {dist}", group)
+    tooltip_dict[normalize_id(dist)] = create_tooltip_html(f"📌 {dist}", group)
 
 for prov, group in df_results.groupby('province'):
-    prov_norm = normalize_id(prov)
     prov_agg = group.groupby('party').agg({'new_vote_pct': 'mean', 'seats_won': 'sum'}).reset_index()
-    tooltip_dict[prov_norm] = create_tooltip_html(f"📌 {prov}", prov_agg)
+    tooltip_dict[normalize_id(prov)] = create_tooltip_html(f"📌 {prov}", prov_agg)
 
 district_seats_data = df_results.groupby(['district', 'party'])['seats_won'].sum().to_dict()
-
-colored_svg_html = render_colored_svg(
-    prov_winners_dict, 
-    dist_winners_dict, 
-    party_colors, 
-    tooltip_dict, 
-    district_seats_data,  
-    svg_file_name="turkiye.svg"
-)
+colored_svg_html = render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, district_seats_data, svg_file_name="turkiye.svg")
 
 components.html(colored_svg_html, height=500, scrolling=False)
 st.divider()
@@ -687,40 +553,34 @@ st.divider()
 st.subheader("İl İl Dağılım Tablosu")
 pivot_df = df_results.pivot(index='district', columns='party', values=['new_vote_pct', 'seats_won'])
 
-kazanan_partiler = national_summary_df[national_summary_df['Vekil'] > 0]['Parti'].values
+# Ülke geneli oy oranına göre partileri büyükten küçüğe sıralıyoruz
+sirali_partiler_tablo = national_summary_df['Parti'].tolist()
 
 display_df = pd.DataFrame()
-for p in PARTIES:
-    if p in kazanan_partiler:
+for p in sirali_partiler_tablo:
+    if p in pivot_df['new_vote_pct'].columns:
         display_df[f"{p} (%)"] = pivot_df['new_vote_pct'][p].round(1)
         display_df[f"{p} (Vekil)"] = pivot_df['seats_won'][p].astype(int)
 
 def highlight_first_party(row):
     styles = [''] * len(row)
     vote_cols = [col for col in row.index if '(%)' in col]
-    if not vote_cols:
-        return styles
+    if not vote_cols: return styles
     
     max_val = -1
     best_col = None
     for col in vote_cols:
-        val = row[col]
-        if val > max_val:
-            max_val = val
+        if row[col] > max_val:
+            max_val = row[col]
             best_col = col
             
     if best_col:
         party_name = best_col.split(' ')[0]
         color = party_colors.get(party_name, '#CCCCCC')
-        
         for i, col in enumerate(row.index):
             if col.startswith(party_name):
                 styles[i] = f'background-color: {color}; color: white; font-weight: bold;'
-                
     return styles
 
-styled_table = display_df.style.apply(highlight_first_party, axis=1).format(
-    lambda x: f"%{x:.1f}" if isinstance(x, float) else x
-)
-
+styled_table = display_df.style.apply(highlight_first_party, axis=1).format(lambda x: f"%{x:.1f}" if isinstance(x, float) else x)
 st.dataframe(styled_table, use_container_width=True)
