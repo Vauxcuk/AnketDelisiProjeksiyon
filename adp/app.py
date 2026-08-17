@@ -95,10 +95,14 @@ def run_simulation(base_df, base_nat, user_nat, threshold=7.0):
     return pd.DataFrame(results)
 
 # ==========================================
-# 3. SVG HARİTA MOTORU (Detaylı Tooltip Eklentili)
+# 3. SVG HARİTA MOTORU (Mutlak Yol Desteğiyle)
 # ==========================================
-def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, svg_file_path="turkiye.svg"):
+def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, svg_file_name="turkiye.svg"):
     try:
+        # app.py dosyasının bulunduğu klasörün yolunu tam olarak alıyoruz
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        svg_file_path = os.path.join(current_dir, svg_file_name)
+        
         with open(svg_file_path, 'r', encoding='utf-8') as f:
             soup = BeautifulSoup(f.read(), 'html.parser')
             
@@ -150,7 +154,7 @@ def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, s
                     
         return str(svg_tag)
     except FileNotFoundError:
-        return f"<div style='color:red;'><b>HATA:</b> '{svg_file_path}' bulunamadı!</div>"
+        return f"<div style='color:red;'><b>HATA:</b> '{svg_file_name}' dosyası app.py ile aynı klasörde bulunamadı!</div>"
     except Exception as e:
         return f"<div style='color:red;'>SVG Hatası: {str(e)}</div>"
 
