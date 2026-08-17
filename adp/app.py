@@ -10,10 +10,14 @@ import plotly.graph_objects as go
 # ==========================================
 st.set_page_config(page_title="AD Projeksiyon", layout="wide")
 
-try:
-    st.sidebar.image("logo.svg", use_container_width=True)
-except FileNotFoundError:
-    pass
+logo_path = "logo.svg"
+if os.path.exists(logo_path):
+    st.sidebar.image(logo_path, use_container_width=True)
+else:
+    # Logo dosyası bulunamazsa sidebar'da şık bir başlık gösterir, uygulama çökmez
+    st.sidebar.markdown("### 🏛️ AD Projeksiyon")
+
+st.sidebar.write("")
 
 st.sidebar.write("")
 # Kullanıcının anında değiştirebileceği Tema Anahtarı
