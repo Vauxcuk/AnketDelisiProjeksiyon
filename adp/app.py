@@ -147,31 +147,53 @@ def normalize_id(text):
 def load_base_data():
     try:
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(current_dir, "ysk_2023_secim_verisi.csv")
+        file_23 = os.path.join(current_dir, "ysk_2023_secim_verisi.csv")
+        file_24 = os.path.join(current_dir, "ysk_2024_secim_verisi.csv")
         
-        df = pd.read_csv(file_path)
+        df_23 = pd.read_csv(file_23)
+        df_24 = pd.read_csv(file_24)
         
-        if 'DIGER' in df['party'].values:
-            df = df[df['party'] != 'DIGER']
-            df['base_vote_pct'] = df.groupby('district')['base_vote_pct'].transform(lambda x: (x / x.sum()) * 100)
+        # DIGER temizliği
+        if 'DIGER' in df_23['party'].values: df_23 = df_23[df_23['party'] != 'DIGER']
+        if 'DIGER' in df_24['party'].values: df_24 = df_24[df_24['party'] != 'DIGER']
 
+        # İlçelere göre ayrı ayrı %100'e normalize ediyoruz
+        df_23['base_vote_pct'] = df_23.groupby('district')['base_vote_pct'].transform(lambda x: (x / x.sum()) * 100)
+        df_24['base_vote_pct'] = df_24.groupby('district')['base_vote_pct'].transform(lambda x: (x / x.sum()) * 100)
+
+        # Sütun isimlerini karmaşa olmaması için güncelliyoruz
+        df_23 = df_23.rename(columns={'base_vote_pct': 'vote_23'})
+        df_24 = df_24.rename(columns={'base_vote_pct': 'vote_24'})
+
+        # TBMM vekil sayıları (seat_count) 2023 Genel Seçim dosyasında yer aldığı için onu referans alıyoruz
+        seats_df = df_23[['district', 'seat_count']].drop_duplicates()
+
+        # İki verisetini birleştir (Sadece birinde olan partiler NaN olmasın diye 0 ile dolduruyoruz. Örn: SAADET 2023'te 0 sayılır)
+        df_merged = pd.merge(df_23[['district', 'party', 'vote_23']], 
+                             df_24[['district', 'party', 'vote_24']], 
+                             on=['district', 'party'], how='outer').fillna(0)
+
+        # --- AĞIRLIKLI HARMANLAMA (%85 2023 + %15 2024) ---
+        df_merged['base_vote_pct'] = (df_merged['vote_23'] * 0.85) + (df_merged['vote_24'] * 0.15)
+        
+        # Vekil sayılarını tekrar tabloya entegre ediyoruz
+        df = pd.merge(df_merged, seats_df, on='district', how='left')
+
+        # Her ilçede harmanlanmış son oyları pivot tablo ile yan yana getirelim
         pivot_base = df.pivot(index='district', columns='party', values='base_vote_pct').fillna(0)
         
         new_rows = []
         for district, row_data in df.groupby('district'):
             seat_count = row_data['seat_count'].iloc[0]
             
-            # YENİ: %87.5 CHP + %12.5 İYİ
+            # YENİ PARTİ SENTETİK TABANI (%87.5 CHP + %12.5 İYİ)
             if 'CHP' in pivot_base.columns and 'IYI' in pivot_base.columns:
                 yp_vote = (pivot_base.loc[district, 'CHP'] * 0.875) + (pivot_base.loc[district, 'IYI'] * 0.125)
                 new_rows.append({'district': district, 'party': 'YENI', 'base_vote_pct': yp_vote, 'seat_count': seat_count})
             
-            # --- A PARTİSİ SENTETİK TABANI (%50 AKP + %20 BBP + %20 MHP + %10 İYİ) ---
+            # A PARTİSİ SENTETİK TABANI (%50 AKP + %20 BBP + %20 MHP + %10 İYİ)
             if all(col in pivot_base.columns for col in ['AKP', 'BBP', 'MHP', 'IYI']):
-                a_vote = (pivot_base.loc[district, 'AKP'] * 0.50) + \
-                         (pivot_base.loc[district, 'BBP'] * 0.20) + \
-                         (pivot_base.loc[district, 'MHP'] * 0.20) + \
-                         (pivot_base.loc[district, 'IYI'] * 0.10)
+                a_vote = (pivot_base.loc[district, 'AKP'] * 0.50) + (pivot_base.loc[district, 'BBP'] * 0.20) + (pivot_base.loc[district, 'MHP'] * 0.20) + (pivot_base.loc[district, 'IYI'] * 0.10)
                 new_rows.append({'district': district, 'party': 'A', 'base_vote_pct': a_vote, 'seat_count': seat_count})
         
         if new_rows:
@@ -185,22 +207,22 @@ def load_base_data():
         national_totals = national_totals / total_seats
         return df, national_totals.to_dict()
         
-    except FileNotFoundError:
-        st.error("🚨 HATA: 'ysk_2023_secim_verisi.csv' dosyası bulunamadı!")
-        st.info("Lütfen CSV dosyanızın 'app.py' ile aynı klasörde bulunduğundan emin olun.")
+    except FileNotFoundError as e:
+        st.error(f"🚨 HATA: Dosya eksik - {str(e)}")
+        st.info("Lütfen 'ysk_2023_secim_verisi.csv' ve 'ysk_2024_secim_verisi.csv' dosyalarının aynı klasörde olduğundan emin olun.")
         st.stop()
 
 df_base, base_national_dict = load_base_data()
 
 # Tüm partiler eksiksiz tanımlandı
-PARTIES = PARTIES = ['AKP', 'CHP', 'IYI', 'DEM', 'MHP', 'YRP', 'TIP', 'ZAFER', 'YENI', 'A', 'BBP']
+PARTIES = ['AKP', 'CHP', 'IYI', 'DEM', 'MHP', 'YRP', 'TIP', 'ZAFER', 'YENI', 'A', 'BBP', 'SAADET']
 PARTIES = [p for p in PARTIES if p in base_national_dict]
 
 party_colors = {
     'AKP': '#FDA000', 'CHP': '#3485fd', 'MHP': '#137BBB', 
     'DEM': '#90268F', 'IYI': '#FFC107', 'YRP': '#009840', 
     'TIP': '#FF1D25', 'ZAFER': '#474647', 'YENI': '#A7050E',
-    'A': '#20379f', 'BBP': '#9e3a3a' # BBP için dilediğin renk kodunu verebilirsin (Örn: Ateş Kırmızısı)
+    'A': '#20379f', 'BBP': '#B22222', 'SAADET': '#ff2e84'
 }
 
 # ==========================================
@@ -413,7 +435,7 @@ st.sidebar.markdown("**Ulusal Oy Oranları**")
 custom_start_values = {
     'AKP': 27.4, 'CHP': 1.0, 'MHP': 5.4, 'DEM': 7.6, 
     'IYI': 5.1, 'YRP': 3.8, 'ZAFER': 2.9, 'TIP': 1.1,
-    'YENI': 38.3, 'A': 4.5, 'BBP': 0.9
+    'YENI': 38.3, 'A': 4.5, 'BBP': 0.9, 'SAADET': 1.1
 }
 
 user_inputs = {}
@@ -480,7 +502,7 @@ with col2:
     df_plot = national_summary_df[national_summary_df['Vekil'] > 0].copy()
     toplam_vekil = df_plot['Vekil'].sum()
 
-    istenen_sira = ['TIP', 'DEM', 'YENI', 'CHP', 'IYI', 'ZAFER', 'A', 'AKP', 'MHP', 'BBP', 'YRP']
+    istenen_sira = ['TIP', 'DEM', 'CHP', 'YENI', 'IYI', 'SAADET', 'ZAFER', 'A', 'AKP', 'MHP', 'BBP', 'YRP']
     sirali_partiler = [p for p in istenen_sira if p in df_plot['Parti'].values]
     for p in df_plot['Parti'].values:
         if p not in sirali_partiler: sirali_partiler.append(p)
