@@ -3,11 +3,131 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import os
 import streamlit.components.v1 as components
+import plotly.graph_objects as go
 
 # ==========================================
-# SAYFA AYARLARI
+# SAYFA AYARLARI VE DİNAMİK TEMA MOTORU
 # ==========================================
-st.set_page_config(page_title="Türkiye Seçim Simülatörü", layout="wide")
+st.set_page_config(page_title="AD Projeksiyon", layout="wide")
+
+try:
+    st.sidebar.image("logo.svg", use_container_width=True)
+except FileNotFoundError:
+    pass
+
+st.sidebar.write("")
+# Kullanıcının anında değiştirebileceği Tema Anahtarı
+is_light_mode = st.sidebar.toggle("🌞 Açık Tema (Light Mode)", value=False)
+
+# 1. HİBRİT TEMA DEĞİŞKENLERİ (Arka planlar ve yan menü eşitlendi)
+if is_light_mode:
+    c_bg = "#f8f9fa"          # Ana Arka Plan ve Sidebar Rengi
+    c_text = "#181720"        # Metinler (Koyu Kömür)
+    c_border = "#181720"      # Çerçeveler
+    t_seat_bg = "#181720"     # Vekil Kutusu Arka Planı
+    t_bar_bg = "#e9ecef"      # Oy Oranı Boş Çubuğu
+    sidebar_input_bg = "#ffffff"
+    sidebar_input_border = "#cccccc"
+else:
+    c_bg = "#181720"
+    c_text = "#ffffff"
+    c_border = "#ffffff"
+    t_seat_bg = "#333333"
+    t_bar_bg = "#23222d"
+    sidebar_input_bg = "#23222d"
+    sidebar_input_border = "#444444"
+
+# 2. GÜNCELLENMİŞ CSS ENJEKSİYONU (Gölgeler kaldırıldı, arka planlar birleştirildi)
+custom_theme_css = f"""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&display=swap');
+
+    /* --- ANA EKRAN VE GENEL AYARLAR --- */
+    .stApp {{
+        background-color: {c_bg};
+        transition: background-color 0.3s;
+        font-family: 'Space Grotesk', sans-serif;
+    }}
+    
+    /* Başlıklar (Gölgeler tamamen kaldırıldı, düz ve net hatlar) */
+    [data-testid="stAppViewContainer"] h1, 
+    [data-testid="stAppViewContainer"] h2, 
+    [data-testid="stAppViewContainer"] h3 {{
+        color: {c_text} !important;
+        text-shadow: none !important;
+        font-weight: 900 !important;
+        text-transform: uppercase;
+        letter-spacing: -1px;
+        margin-bottom: 1rem !important;
+    }}
+
+    [data-testid="stAppViewContainer"] p, 
+    [data-testid="stAppViewContainer"] label,
+    [data-testid="stAppViewContainer"] span,
+    [data-testid="stAppViewContainer"] .stMarkdown {{
+        color: {c_text} !important;
+    }}
+
+    /* --- YAN MENÜ (SİDEBAR) - ARKA PLAN ANA EKRANLA BİRLEŞTİRİLDİ --- */
+    section[data-testid="stSidebar"] {{
+        background-color: {c_bg} !important;
+        border-right: 1px solid {c_border} !important;
+        transition: background-color 0.3s;
+    }}
+    
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] label {{
+        color: {c_text} !important;
+    }}
+    
+    section[data-testid="stSidebar"] h1, 
+    section[data-testid="stSidebar"] h2, 
+    section[data-testid="stSidebar"] h3 {{
+        text-shadow: none !important;
+        letter-spacing: normal;
+        color: {c_text} !important;
+        font-weight: 700 !important;
+    }}
+
+    section[data-testid="stSidebar"] .stNumberInput input, 
+    section[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"], 
+    section[data-testid="stSidebar"] .stTextInput input,
+    [data-baseweb="popover"] {{
+        background-color: {sidebar_input_bg} !important;
+        color: {c_text} !important;
+        border: 1px solid {sidebar_input_border} !important;
+        border-radius: 6px !important;
+        box-shadow: none !important;
+    }}
+    
+    section[data-testid="stSidebar"] .stNumberInput input:focus, 
+    section[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"]:focus-within {{
+        border-color: #eb252d !important;
+        box-shadow: 0 0 0 1px #eb252d !important;
+    }}
+
+    /* --- DİĞER BİLEŞENLER --- */
+    hr {{
+        border-color: #eb252d !important;
+        border-width: 1px !important;
+        border-style: solid !important;
+        margin-top: 1.5rem !important;
+        margin-bottom: 1.5rem !important;
+    }}
+    
+    [data-testid="stDataFrame"] {{
+        border: 2px solid {c_border};
+        box-shadow: 4px 4px 0px #eb252d;
+        background-color: {c_bg};
+    }}
+
+    [data-testid="stHeader"] {{
+        background-color: transparent !important;
+    }}
+</style>
+"""
+st.markdown(custom_theme_css, unsafe_allow_html=True)
 
 # ==========================================
 # 1. GÜÇLÜ İSİM NORMALİZASYONU VE VERİ OKUMA
@@ -324,14 +444,14 @@ def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, d
 # ==========================================
 # 4. ARAYÜZ (UI) TASARIMI
 # ==========================================
-st.title("🗳️ Türkiye Seçim Simülatörü & İnteraktif Harita")
+st.title("AD Türkiye Genel Seçim Projeksiyonu")
 
 st.sidebar.header("Seçim Parametreleri")
 
 threshold_input = st.sidebar.number_input("Ülke Barajı (%)", min_value=0.0, max_value=15.0, value=7.0, step=0.5)
 st.sidebar.divider()
 
-st.sidebar.subheader("🤝 İttifak Seçenekleri")
+st.sidebar.subheader("İttifak Seçenekleri")
 use_alliances = st.sidebar.checkbox("İttifak Sistemini Etkinleştir", value=True)
 
 alliances = {}
@@ -404,34 +524,108 @@ party_colors = {
     'TIP': '#FF1D25', 'ZAFER': '#474647'
 }
 
-st.subheader(f"TBMM Sandalye Dağılımı (Toplam {national_summary_df['Vekil'].sum()} Vekil)")
+st.subheader(f"TBMM Sandalye Dağılımı ve Oy Oranları")
 
-html_blocks = ["""
-<style>
-.custom-row { display: flex; align-items: center; margin-bottom: 6px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-.custom-party { width: 110px; text-align: right; padding-right: 12px; font-weight: 600; color: #555; font-size: 15px; }
-.custom-seat { background-color: #111; color: white; font-weight: bold; width: 45px; text-align: center; padding: 6px 0; font-size: 15px; margin-right: 10px; }
-.custom-bar-bg { flex-grow: 1; background-color: #f7f7f7; height: 34px; overflow: hidden; display: flex; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); }
-.custom-bar-fill { height: 100%; display: flex; align-items: center; padding-left: 8px; color: white; font-weight: 700; font-size: 14px; transition: width 0.5s ease-in-out; white-space: nowrap; }
-</style>
-<div style="max-width: 900px; margin: 10px 0 30px 0;">
-"""]
+# --- SÜTUNLARI OLUŞTUR: SOLDA TABLO, SAĞDA GRAFİK ---
+col1, col2 = st.columns([1.5, 1])
 
-for index, row in national_summary_df.iterrows():
-    party = row['Parti']
-    seats = int(row['Vekil'])
-    vote_pct = row['Normalize Oy (%)']
-    color = party_colors.get(party, "#888888")
+with col1:
+    # 1. Tabloyu vekil sayısına değil, oy oranına (Normalize Oy (%)) göre büyükten küçüğe sıralıyoruz
+    sorted_summary_df = national_summary_df.sort_values(by='Normalize Oy (%)', ascending=False)
     
-    width = vote_pct
-    html_blocks.append(f'<div class="custom-row"><div class="custom-party">{party}</div><div class="custom-seat">{seats}</div><div class="custom-bar-bg"><div class="custom-bar-fill" style="width: {width}%; background-color: {color}; min-width: 60px;">%{vote_pct:.2f}</div></div></div>')
+    # 2. Orantılama için tablodaki en yüksek oy oranını buluyoruz (En yüksek oy = %100 dolu bar)
+    max_vote_pct = sorted_summary_df['Normalize Oy (%)'].max()
+    if max_vote_pct == 0:
+        max_vote_pct = 1.0 # Sıfıra bölünme hatasını önlemek için güvenli sınır
+
+    html_blocks = [f"""
+    <style>
+    .custom-row {{ display: flex; align-items: center; margin-bottom: 8px; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; }}
     
-html_blocks.append("</div>")
-st.markdown("".join(html_blocks), unsafe_allow_html=True)
+    .custom-party {{ width: 110px; text-align: right; padding-right: 12px; font-weight: 900; color: {c_text}; font-size: 16px; text-transform: uppercase; }}
+    
+    .custom-seat {{ background-color: {t_seat_bg}; color: #ffffff !important; font-weight: bold; width: 45px; text-align: center; padding: 6px 0; font-size: 15px; margin-right: 10px; border: 2px solid {c_text}; box-shadow: 3px 3px 0px #eb252d; }}
+    
+    .custom-bar-bg {{ flex-grow: 1; background-color: {t_bar_bg}; height: 36px; overflow: hidden; display: flex; border: 2px solid {c_text}; box-shadow: 3px 3px 0px #eb252d; }}
+    
+    .custom-bar-fill {{ height: 100%; display: flex; align-items: center; padding-left: 8px; color: #ffffff !important; font-weight: 700; font-size: 14px; white-space: nowrap; border-right: 2px solid {c_text}; }}
+    </style>
+    <div style="max-width: 100%; margin: 10px 0 10px 0;">
+    """]
+
+    for index, row in sorted_summary_df.iterrows():
+        party = row['Parti']
+        seats = int(row['Vekil'])
+        vote_pct = row['Normalize Oy (%)']
+        color = party_colors.get(party, "#888888")
+        
+        # Çubuğun doluluk oranı, en yüksek oy alan partiye göre orantılanıyor (Max oy = %100 genişlik)
+        relative_width = (vote_pct / max_vote_pct) * 100
+        
+        html_blocks.append(f'<div class="custom-row"><div class="custom-party">{party}</div><div class="custom-seat">{seats}</div><div class="custom-bar-bg"><div class="custom-bar-fill" style="width: {relative_width}%; background-color: {color}; min-width: 60px;">%{vote_pct:.2f}</div></div></div>')
+        
+    html_blocks.append("</div>")
+    st.markdown("".join(html_blocks), unsafe_allow_html=True)
+
+with col2:
+    # --- YARIM AY (SEMI-DONUT) MECLİS GRAFİĞİ ---
+    df_plot = national_summary_df[national_summary_df['Vekil'] > 0].copy()
+    toplam_vekil = df_plot['Vekil'].sum()
+
+    istenen_sira = ['TIP', 'DEM', 'CHP', 'IYI', 'ZAFER', 'AKP', 'MHP', 'YRP']
+    
+    sirali_partiler = [p for p in istenen_sira if p in df_plot['Parti'].values]
+    for p in df_plot['Parti'].values:
+        if p not in sirali_partiler:
+            sirali_partiler.append(p)
+
+    ordered_values = [df_plot[df_plot['Parti'] == p]['Vekil'].values[0] for p in sirali_partiler]
+    ordered_colors = [party_colors.get(p, "#888888") for p in sirali_partiler]
+
+    labels = sirali_partiler + ["Gizli_Yari"]
+    values = ordered_values + [toplam_vekil]
+    colors = ordered_colors + ["rgba(0,0,0,0)"]
+
+    line_widths = [2] * len(sirali_partiler) + [0]
+
+    fig = go.Figure(data=[go.Pie(
+        labels=labels,
+        values=values,
+        hole=0.55,
+        rotation=-90,             
+        direction="clockwise",
+        sort=False,               
+        marker=dict(colors=colors, line=dict(color=c_bg, width=line_widths)), # Çizgi rengi de dinamik
+        textinfo='label+value',
+        textposition='inside',
+        insidetextorientation='horizontal',
+        hoverinfo='none'          
+    )])
+
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(t=0, b=0, l=0, r=0),
+        height=320,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        annotations=[dict(
+            text=f"<b><span style='font-size:34px; color:{c_text}'>{toplam_vekil}</span></b>", 
+            x=0.5, 
+            y=0.5,            
+            yanchor='bottom', 
+            showarrow=False 
+        )]
+    )
+
+    fig.update_traces(texttemplate="%{label}<br>%{value}", selector=dict(type='pie'))
+    fig.data[0].texttemplate = [f"{l}<br>{v}" for l, v in zip(sirali_partiler, ordered_values)] + [""]
+
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
 st.divider()
 
 # --- SVG HARİTA BÖLÜMÜ ---
-st.subheader("🗺️ İl ve Bölge Bazında Birinci Partiler (SVG)")
+st.subheader("İl Haritası")
 
 province_summary = df_results.groupby(['province', 'party'])['new_vote_pct'].mean().reset_index()
 first_parties_prov = province_summary.loc[province_summary.groupby('province')['new_vote_pct'].idxmax()]
@@ -481,11 +675,11 @@ colored_svg_html = render_colored_svg(
     svg_file_name="turkiye.svg"
 )
 
-components.html(colored_svg_html, height=620, scrolling=False)
+components.html(colored_svg_html, height=500, scrolling=False)
 st.divider()
 
 # --- TABLO BÖLÜMÜ ---
-st.subheader("📍 87 Seçim Çevresine Göre İl İl Dağılım Tablosu")
+st.subheader("İl İl Dağılım Tablosu")
 pivot_df = df_results.pivot(index='district', columns='party', values=['new_vote_pct', 'seats_won'])
 
 kazanan_partiler = national_summary_df[national_summary_df['Vekil'] > 0]['Parti'].values
