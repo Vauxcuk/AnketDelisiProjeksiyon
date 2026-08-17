@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from bs4 import BeautifulSoup
 import os
+import streamlit.components.v1 as components
 
 # ==========================================
 # SAYFA AYARLARI
@@ -68,8 +69,33 @@ def calculate_dhondt(votes_dict, seat_count):
         divisors[winner] += 1
     return seats_won
 
-def run_simulation(base_df, base_nat, user_nat, threshold=7.0):
-    qualified_parties = [p for p, v in user_nat.items() if v >= threshold]
+def run_simulation(base_df, base_nat, user_nat, alliances, threshold=7.0):
+    # 1. Her partinin hangi ittifakta olduğunu belirle (İttifakta değilse kendi adını ittifak kabul et)
+    party_to_alliance = {}
+    for alliance_name, parties in alliances.items():
+        for p in parties:
+            party_to_alliance[p] = alliance_name
+            
+    # Her parti için tekil ittifak grubu oluştur
+    for p in PARTIES:
+        if p not in party_to_alliance:
+            party_to_alliance[p] = p
+            alliances[p] = [p]
+
+    # 2. İttifakların toplam ulusal oylarını hesapla ve baraj kontrolü yap
+    alliance_national_votes = {}
+    for alliance_name, parties in alliances.items():
+        total_alliance_vote = sum([user_nat.get(p, 0) for p in parties])
+        alliance_national_votes[alliance_name] = total_alliance_vote
+
+    # Barajı geçen ittifaklar
+    qualified_alliances = [aly for aly, vote in alliance_national_votes.items() if vote >= threshold]
+    
+    # Barajı geçen ittifaklardaki partiler barajı geçmiş sayılır
+    qualified_parties = []
+    for aly in qualified_alliances:
+        qualified_parties.extend(alliances[aly])
+
     multipliers = {p: (user_nat[p] / base_nat[p]) if base_nat.get(p, 0) > 0 else 0 for p in PARTIES}
     
     results = []
@@ -80,6 +106,7 @@ def run_simulation(base_df, base_nat, user_nat, threshold=7.0):
         total_proj = sum(proj_votes.values())
         norm_votes = {p: (v / total_proj) * 100 for p, v in proj_votes.items()} if total_proj > 0 else {p: 0 for p in proj_votes}
         
+        # Sadece barajı geçen partiler D'Hondt yarışına girebilir
         eligible_votes = {p: norm_votes[p] for p in qualified_parties if p in norm_votes}
         district_seats = calculate_dhondt(eligible_votes, seat_count) if eligible_votes else {}
             
@@ -95,11 +122,10 @@ def run_simulation(base_df, base_nat, user_nat, threshold=7.0):
     return pd.DataFrame(results)
 
 # ==========================================
-# 3. SVG HARİTA MOTORU (Mutlak Yol Desteğiyle)
+# 3. SVG HARİTA MOTORU (Kararlı ve Temiz Versiyon)
 # ==========================================
 def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, svg_file_name="turkiye.svg"):
     try:
-        # app.py dosyasının bulunduğu klasörün yolunu tam olarak alıyoruz
         current_dir = os.path.dirname(os.path.abspath(__file__))
         svg_file_path = os.path.join(current_dir, svg_file_name)
         
@@ -143,18 +169,20 @@ def render_colored_svg(prov_winners, dist_winners, party_colors, tooltip_dict, s
                 else:
                     path['fill'] = color
                     
-                hover_text = tooltip_dict.get(svg_id_norm, f"{raw_id} - 1. Parti: {winning_party}")
+                hover_html = tooltip_dict.get(svg_id_norm, f"<b>{raw_id}</b><br>1. Parti: {winning_party}")
+                path['data-tooltip'] = hover_html
+                path['class'] = path.get('class', []) + ['map-path']
                 
-                if path.find('title'):
-                    path.title.decompose()
-                    
-                new_title = soup.new_tag('title')
-                new_title.string = hover_text
-                path.append(new_title)
-                    
-        return str(svg_tag)
+        # CSS ve HTML yapısı tek bir satırda birleştirilerek Python sözdizimi hataları engellendi
+        css_style = "<style>body{margin:0;background-color:transparent;display:flex;justify-content:center;}.map-container{position:relative;width:100%;max-width:950px;min-height:550px;display:flex;justify-content:center;}.map-path{cursor:pointer;transition:opacity 0.2s;}.map-path:hover{opacity:0.8;stroke:#000;stroke-width:2px;}#svg-tooltip{position:absolute;display:none;background:white;border:1px solid #ccc;padding:10px 14px;box-shadow:0 4px 15px rgba(0,0,0,0.2);border-radius:6px;pointer-events:none;z-index:9999;font-family:'Segoe UI', Tahoma, sans-serif;font-size:13px;color:#333;min-width:190px;}.tip-header{font-weight:bold;font-size:14px;margin-bottom:6px;border-bottom:1px solid #eee;padding-bottom:4px;color:#111;}.tip-row{display:flex;align-items:center;margin-bottom:3px;}.tip-party{width:50px;font-weight:600;color:#333;}.tip-seat{background:#111;color:#fff;width:24px;text-align:center;font-weight:bold;font-size:11px;margin-right:6px;}.tip-bar-bg{flex-grow:1;background:#eee;height:12px;border-radius:2px;overflow:hidden;}.tip-bar-fill{height:100%;}.tip-pct{margin-left:6px;font-size:11px;color:#666;width:45px;text-align:right;}</style>"        
+        js_script = "<script>const paths=document.querySelectorAll('.map-path');const tooltip=document.getElementById('svg-tooltip');const wrapper=document.getElementById('map-wrapper');paths.forEach(path=>{path.addEventListener('mousemove',(e)=>{const tooltipData=path.getAttribute('data-tooltip');if(tooltipData){tooltip.innerHTML=tooltipData;tooltip.style.display='block';const rect=wrapper.getBoundingClientRect();const x=e.clientX-rect.left+15;const y=e.clientY-rect.top+15;tooltip.style.left=x+'px';tooltip.style.top=y+'px';}});path.addEventListener('mouseleave',()=>{tooltip.style.display='none';});});</script>"
+
+        complete_html = f"<!DOCTYPE html><html><head>{css_style}</head><body><div class='map-container' id='map-wrapper'><div id='svg-tooltip'></div>{str(svg_tag)}</div>{js_script}</body></html>"
+        
+        return complete_html
+        
     except FileNotFoundError:
-        return f"<div style='color:red;'><b>HATA:</b> '{svg_file_name}' dosyası app.py ile aynı klasörde bulunamadı!</div>"
+        return f"<div style='color:red;'><b>HATA:</b> '{svg_file_name}' dosyası bulunamadı!</div>"
     except Exception as e:
         return f"<div style='color:red;'>SVG Hatası: {str(e)}</div>"
 
@@ -167,18 +195,49 @@ st.sidebar.header("Seçim Parametreleri")
 
 threshold_input = st.sidebar.number_input("Ülke Barajı (%)", min_value=0.0, max_value=15.0, value=7.0, step=0.5)
 st.sidebar.divider()
+
+# --- İTTİFAK YÖNETİMİ (Modifiye Edilebilir & Güncel Ön Tanımlı Bloklar) ---
+st.sidebar.subheader("🤝 İttifak Seçenekleri")
+use_alliances = st.sidebar.checkbox("İttifak Sistemini Etkinleştir", value=True)
+
+alliances = {}
+if use_alliances:
+    st.sidebar.markdown("**Ön Tanımlı İttifaklar:**")
+    
+    # Cumhur İttifakı Modifiye Alanı
+    enable_cumhur = st.sidebar.checkbox("Cumhur İttifakı", value=True)
+    if enable_cumhur:
+        default_cumhur = [p for p in ['AKP', 'MHP'] if p in PARTIES]
+        cumhur_parties = st.sidebar.multiselect("Cumhur İttifakı Üyeleri", PARTIES, default=default_cumhur, key="cumhur_parties")
+        if cumhur_parties:
+            alliances["Cumhur İttifakı"] = cumhur_parties
+            
+    # Emek ve Özgürlük İttifakı Modifiye Alanı (DEM ve TİP)
+    enable_emek = st.sidebar.checkbox("Emek ve Özgürlük İttifakı", value=True)
+    if enable_emek:
+        default_emek = [p for p in ['DEM', 'TIP'] if p in PARTIES]
+        emek_parties = st.sidebar.multiselect("Emek ve Özgürlük İttifakı Üyeleri", PARTIES, default=default_emek, key="emek_parties")
+        if emek_parties:
+            alliances["Emek ve Özgürlük İttifakı"] = emek_parties
+        
+    # Tamamen Özel Ek İttifak Tanımlama
+    st.sidebar.markdown("**Özel İttifak Ekle:**")
+    custom_aly_name = st.sidebar.text_input("İttifak Adı", placeholder="Örn: Alternatif Blok")
+    
+    assigned_parties = [p for parties in alliances.values() for p in parties]
+    available_parties_for_custom = [p for p in PARTIES if p not in assigned_parties]
+    
+    custom_aly_parties = st.sidebar.multiselect("İttifak Üyesi Partiler", available_parties_for_custom, key="custom_aly_parties")
+    
+    if custom_aly_name and custom_aly_parties:
+        alliances[custom_aly_name] = custom_aly_parties
+
+st.sidebar.divider()
 st.sidebar.markdown("**Ulusal Oy Oranları**")
 
-# Kendi belirlediğin başlangıç oy oranları (buradan dilediğin gibi değiştirebilirsin)
 custom_start_values = {
-    'AKP': 29.0,
-    'CHP': 39.0,
-    'MHP': 7.0,
-    'DEM': 8.0,
-    'IYI': 5.0,
-    'YRP': 4.0,
-    'ZAFER': 3.0,
-    'TIP': 2.0
+    'AKP': 29.0, 'CHP': 39.0, 'MHP': 7.0, 'DEM': 8.0, 
+    'IYI': 5.0, 'YRP': 4.0, 'ZAFER': 3.0, 'TIP': 2.0
 }
 
 user_inputs = {}
@@ -192,11 +251,11 @@ for p in PARTIES:
 if abs(total_input - 100.0) > 0.1:
     st.sidebar.warning(f"Toplam oy %{total_input:.1f}. Oylar %100'e normalize ediliyor.")
 
-# Hataya sebep olan değişken burada tanımlanıyor:
 user_inputs_norm = {p: (v / total_input) * 100 if total_input > 0 else 0 for p, v in user_inputs.items()}
 
-# Hesaplama Motorunu Çalıştır
-df_results = run_simulation(df_base, base_national_dict, user_inputs_norm, threshold=threshold_input)
+# Hesaplama Motorunu Güncel İttifaklar ile Çalıştır
+df_results = run_simulation(df_base, base_national_dict, user_inputs_norm, alliances, threshold=threshold_input)
+
 # --- DETAYLI ULUSAL ÖZET TABLOSU (ÖZEL TASARIM) ---
 summary_data = []
 for p in PARTIES:
@@ -257,34 +316,40 @@ dist_winners_dict = {normalize_id(row['district']): row['party'] for _, row in f
 
 tooltip_dict = {}
 
+def create_tooltip_html(title_str, group_data):
+    # Oylara göre büyükten küçüğe sırala ve sadece ilk 5 partiyi al
+    sorted_g = group_data.sort_values(by='new_vote_pct', ascending=False).head(5)
+    
+    html = f'<div class="tip-header">{title_str}</div>'
+    for _, r in sorted_g.iterrows():
+        pct = r['new_vote_pct']
+        if pct > 0.0: # Oyu olanları göster
+            party = r['party']
+            seats = int(r['seats_won'])
+            color = party_colors.get(party, '#888888')
+            html += f'''
+            <div class="tip-row">
+                <div class="tip-party">{party}</div>
+                <div class="tip-seat">{seats}</div>
+                <div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {pct}%; background-color: {color};"></div></div>
+                <div class="tip-pct">%{pct:.1f}</div>
+            </div>
+            '''
+    return html
+
 for dist, group in df_results.groupby('district'):
     dist_norm = normalize_id(dist)
-    sorted_group = group.sort_values(by='new_vote_pct', ascending=False)
-    
-    lines = [f"📌 Seçim Çevresi: {dist}", "-" * 20]
-    for _, row in sorted_group.iterrows():
-        if row['new_vote_pct'] > 0:
-            vekil_metni = f"({row['seats_won']} Vekil)" if row['seats_won'] > 0 else ""
-            lines.append(f"{row['party']}: %{row['new_vote_pct']:.1f} {vekil_metni}")
-            
-    tooltip_dict[dist_norm] = "\n".join(lines)
+    tooltip_dict[dist_norm] = create_tooltip_html(f"📌 {dist}", group)
 
 for prov, group in df_results.groupby('province'):
     prov_norm = normalize_id(prov)
     prov_agg = group.groupby('party').agg({'new_vote_pct': 'mean', 'seats_won': 'sum'}).reset_index()
-    sorted_agg = prov_agg.sort_values(by='new_vote_pct', ascending=False)
-    
-    lines = [f"📌 İl: {prov}", "-" * 20]
-    for _, row in sorted_agg.iterrows():
-        if row['new_vote_pct'] > 0:
-            vekil_metni = f"({row['seats_won']} Vekil)" if row['seats_won'] > 0 else ""
-            lines.append(f"{row['party']}: %{row['new_vote_pct']:.1f} {vekil_metni}")
-            
-    tooltip_dict[prov_norm] = "\n".join(lines)
+    tooltip_dict[prov_norm] = create_tooltip_html(f"📌 {prov}", prov_agg)
 
 colored_svg_html = render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, svg_file_name="turkiye.svg")
 
-st.markdown(f"<div style='display:flex; justify-content:center; width:100%; margin-bottom: 20px;'>{colored_svg_html}</div>", unsafe_allow_html=True)
+# Haritayı Streamlit'in kararlı component yapısı ile basıyoruz (yükseklik değerini haritanın sığacağı şekilde ayarlayabilirsin)
+components.html(colored_svg_html, height=620, scrolling=False)
 
 st.divider()
 
@@ -292,13 +357,43 @@ st.divider()
 st.subheader("📍 87 Seçim Çevresine Göre İl İl Dağılım Tablosu")
 pivot_df = df_results.pivot(index='district', columns='party', values=['new_vote_pct', 'seats_won'])
 
-# Sadece ülke genelinde en az 1 vekil çıkaran partileri tabloda göstermek için listeyi güncelledik
 kazanan_partiler = national_summary_df[national_summary_df['Vekil'] > 0]['Parti'].values
 
 display_df = pd.DataFrame()
 for p in PARTIES:
     if p in kazanan_partiler:
+        # Yuvarlama işlemini tek basamağa (1) düşürdük
         display_df[f"{p} (%)"] = pivot_df['new_vote_pct'][p].round(1)
         display_df[f"{p} (Vekil)"] = pivot_df['seats_won'][p].astype(int)
 
-st.dataframe(display_df, use_container_width=True)
+# Her satırda (seçim çevresinde) en yüksek oy oranına sahip partiyi tespit et
+def highlight_first_party(row):
+    styles = [''] * len(row)
+    vote_cols = [col for col in row.index if '(%)' in col]
+    if not vote_cols:
+        return styles
+    
+    max_val = -1
+    best_col = None
+    for col in vote_cols:
+        val = row[col]
+        if val > max_val:
+            max_val = val
+            best_col = col
+            
+    if best_col:
+        party_name = best_col.split(' ')[0]
+        color = party_colors.get(party_name, '#CCCCCC')
+        
+        for i, col in enumerate(row.index):
+            if col.startswith(party_name):
+                styles[i] = f'background-color: {color}; color: white; font-weight: bold;'
+                
+    return styles
+
+# Tabloyu stillendir ve ondalık sayıların her zaman tek basamak (%0.0) görünmesini sağla
+styled_table = display_df.style.apply(highlight_first_party, axis=1).format(
+    lambda x: f"%{x:.1f}" if isinstance(x, float) else x
+)
+
+st.dataframe(styled_table, use_container_width=True)
