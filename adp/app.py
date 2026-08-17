@@ -282,7 +282,7 @@ for prov, group in df_results.groupby('province'):
             
     tooltip_dict[prov_norm] = "\n".join(lines)
 
-colored_svg_html = render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, svg_file_path="turkiye.svg")
+colored_svg_html = render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, svg_file_name="turkiye.svg")
 
 st.markdown(f"<div style='display:flex; justify-content:center; width:100%; margin-bottom: 20px;'>{colored_svg_html}</div>", unsafe_allow_html=True)
 
