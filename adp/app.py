@@ -1178,56 +1178,33 @@ if 'cb_cands_1' not in st.session_state:
 
 st.subheader("1. Tur Senaryosu")
 
-# Mobilde dikey patlamayı önleyen ve yatay kaydırmayı zorlayan CSS
-st.markdown("""
-<style>
-    /* Streamlit kolonlarının mobilde alt alta gelmesini kesin olarak engelle */
-    @media (max-width: 768px) {
-        .element-container:has(> .stColumns) {
-            display: flex;
-            flex-direction: row;
-            overflow-x: auto;
-            width: 100%;
-        }
-        div[data-testid="stHorizontalBlock"] {
-            flex-wrap: nowrap !important;
-            min-width: 650px;
-        }
-        div[data-testid="column"] {
-            min-width: 50px !important;
-            flex: 1 1 auto !important;
-        }
-    }
-</style>
-""", unsafe_allow_html=True)
-
 with st.container(border=True):
-    # Başlık Satırı
-    col_baslik = st.columns([2.5] + [1]*len(cb_parties))
-    col_baslik[0].markdown("<div style='font-size:11px; font-weight:900;'>ADAY</div>", unsafe_allow_html=True)
-    for i, p in enumerate(cb_parties):
-        c = party_colors.get(p, "#888")
-        col_baslik[i+1].markdown(f"<div style='text-align:center; font-size:10px; color:{c}; font-weight:900;'>{p}</div>", unsafe_allow_html=True)
-    
-    st.markdown("<hr style='margin:5px 0;'>", unsafe_allow_html=True)
-    
-    # Veri Satırları
+    st.markdown("<p style='font-size:12px; color:#888; margin-bottom:10px;'>Adayların partilerden alacağı oy oranlarını (%) aşağıdaki kartlardan düzenleyin:</p>", unsafe_allow_html=True)
+
     for idx, cand in enumerate(st.session_state.cb_cands_1):
-        r_cols = st.columns([2.5] + [1]*len(cb_parties))
-        
-        with r_cols[0]:
-            cand["name"] = st.text_input(f"Aday Adı {idx}", value=cand["name"], label_visibility="collapsed", key=f"c1_n_{idx}")
+        # Her aday için neobrutalist şık birer ana kart oluşturalım
+        with st.container(border=True):
+            # Aday İsmi Girişi
+            cand["name"] = st.text_input(f"Aday {idx+1} Adı", value=cand["name"], key=f"c1_n_{idx}")
             
-        for i, p in enumerate(cb_parties):
-            with r_cols[i+1]:
-                cand["votes"][p] = st.number_input(
-                    f"{p}", 
-                    value=cand["votes"].get(p, 0), 
-                    min_value=0, 
-                    max_value=100, 
-                    label_visibility="collapsed", 
-                    key=f"c1_v_{idx}_{p}"
-                )
+            st.markdown("<div style='font-size: 11px; font-weight: bold; margin: 10px 0 5px 0;'>Parti Oy Oranları (%)</div>", unsafe_allow_html=True)
+            
+            # Partileri mobilde ve PC'de taşma yapmayacak şekilde 3'lü veya 4'lü gridler halinde dizelim
+            cols = st.columns(4) # Mobilde de alt alta 4'lü bloklar halinde akar, asla kayma yapmaz
+            for i, p in enumerate(cb_parties):
+                col_idx = i % 4
+                with cols[col_idx]:
+                    c_color = party_colors.get(p, "#888")
+                    # Kutunun üstüne minik renkli parti etiketi
+                    st.markdown(f"<div style='font-size:10px; font-weight:900; color:{c_color}; margin-bottom:-5px;'>{p}</div>", unsafe_allow_html=True)
+                    cand["votes"][p] = st.number_input(
+                        f"v_{idx}_{p}", 
+                        value=cand["votes"].get(p, 0), 
+                        min_value=0, 
+                        max_value=100, 
+                        label_visibility="collapsed", 
+                        key=f"c1_v_{idx}_{p}"
+                    )
 
 # İŞLEM VE HARİTA FONKSİYONU (MATRİS ÇARPIMI İLE HIZLANDIRILDI)
 @st.cache_data(show_spinner=False)
