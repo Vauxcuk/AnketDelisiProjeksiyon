@@ -932,7 +932,7 @@ with st.container(border=True):
     components.html(colored_svg_html, height=500, scrolling=False)
 
 # ==========================================
-# İL BAZLI OY VE VEKİL DAĞILIMI (DEĞİŞİM DELTA GÖSTERGELİ)
+# İL BAZLI OY VE VEKİL DAĞILIMI (GÜNCEL CSV VERİSİ İLE)
 # ==========================================
 st.markdown("<br>", unsafe_allow_html=True)
 st.subheader("İl Bazlı Oy ve Vekil Dağılımı")
@@ -949,16 +949,19 @@ with st.container(border=True):
     if selected_province_bar:
         prov_df = df_results[df_results['province'] == selected_province_bar]
         
-        # 2023 baz verilerini yükleyip il bazında parti oylarını hesaplayalım
+        # 2023 baz verilerini yükle
         current_dir = os.path.dirname(os.path.abspath(__file__))
         file_23 = os.path.join(current_dir, "ysk_2023_secim_verisi.csv")
         df_23_raw = pd.read_csv(file_23)
         
-        # 2023 il/bölge bazlı parti oy yüzdelerini normalize et
-        df_23_raw['vote_23_pct'] = df_23_raw.groupby('district')['base_vote_pct'].transform(lambda x: (x / x.sum()) * 100)
+        # 2023 verilerini il bazlı filtrele
+        prov_23_subset = df_23_raw[df_23_raw['district'].apply(lambda x: str(x).split('-')[0].strip().lower()) == selected_province_bar.lower()].copy()
         
-        # Seçilen ilin altındaki ilçelerin/bölgelerin 2023 ortalama oy oranlarını bul
-        prov_23_subset = df_23_raw[df_23_raw['district'].apply(lambda x: str(x).split('-')[0].strip().lower()) == selected_province_bar.lower()]
+        # 1. GERÇEK VEKİL SAYILARI (Doğrudan CSV'deki yeni sütundan)
+        base_23_seats_dict = prov_23_subset.groupby('party')['seats_won_2023'].sum().to_dict()
+        
+        # 2. GERÇEK OY ORANLARI (Doğrudan il alt kümesi üzerinde hesaplanır)
+        prov_23_subset['vote_23_pct'] = prov_23_subset.groupby('district')['base_vote_pct'].transform(lambda x: (x / x.sum()) * 100)
         base_23_prov_dict = prov_23_subset.groupby('party')['vote_23_pct'].mean().to_dict()
 
         # Simülasyon sonuçlarını derle
@@ -975,6 +978,10 @@ with st.container(border=True):
         prov_html_blocks = [f"""
         <style>
         .prov-vote-delta {{ font-size: 11px; margin-left: 6px; font-weight: 400; opacity: 0.9; }}
+        .prov-seat-delta {{ font-size: 10px; font-weight: 900; display: block; line-height: 1; }}
+        .delta-pos {{ color: #00E676; }}
+        .delta-neg {{ color: #FF3D00; }}
+        .delta-neu {{ color: #9E9E9E; }}
         </style>
         <div style="max-width: 100%; margin: 10px 0 10px 0;">
         """]
@@ -987,13 +994,14 @@ with st.container(border=True):
             if vote_pct <= 0.0 and seats <= 0:
                 continue
                 
-            # 2023'e göre oy değişimini hesapla
+            # Delta Hesaplamaları
             base_23_val = base_23_prov_dict.get(party, 0.0)
             vote_delta = vote_pct - base_23_val
+            v_delta_str = f"(+{vote_delta:.1f})" if vote_delta > 0 else (f"({vote_delta:.1f})" if vote_delta < 0 else "")
             
-            if vote_delta > 0: v_delta_str = f"(+{vote_delta:.1f})"
-            elif vote_delta < 0: v_delta_str = f"({vote_delta:.1f})"
-            else: v_delta_str = ""
+            base_23_seats = base_23_seats_dict.get(party, 0)
+            seat_delta = seats - base_23_seats
+            s_delta_html = f"<span class='prov-seat-delta delta-pos'>▲ {seat_delta}</span>" if seat_delta > 0 else (f"<span class='prov-seat-delta delta-neg'>▼ {abs(seat_delta)}</span>" if seat_delta < 0 else "<span class='prov-seat-delta delta-neu'>-</span>")
                 
             color = party_colors.get(party, "#888888")
             relative_width = (vote_pct / max_prov_vote) * 100
@@ -1001,7 +1009,7 @@ with st.container(border=True):
             prov_html_blocks.append(
                 f'<div class="custom-row">'
                 f'<div class="custom-party">{party}</div>'
-                f'<div class="custom-seat"><span class="seat-num">{seats}</span></div>'
+                f'<div class="custom-seat"><span class="seat-num">{seats}</span>{s_delta_html}</div>'
                 f'<div class="custom-bar-bg">'
                 f'<div class="custom-bar-fill" style="width: {relative_width}%; background-color: {color}; min-width: 90px;">'
                 f'%{vote_pct:.1f} <span class="prov-vote-delta">{v_delta_str}</span>'
@@ -1170,30 +1178,43 @@ if 'cb_cands_1' not in st.session_state:
 
 st.subheader("1. Tur Senaryosu")
 
-# ÖZEL MATRİS (Mobilde taşmayı önleyen yatay kaydırmalı Neobrutalist Kapsayıcı)
-with st.container(border=True):
-    st.markdown(
-        f"""
-        <div style="width: 100%; overflow-x: auto; padding-bottom: 10px;">
-            <div style="min-width: {800 + (len(cb_parties) * 60)}px;">
-        """, 
-        unsafe_allow_html=True
-    )
+# Mobil ve Desktop için optimize edilmiş kapsayıcı
+st.markdown(
+    """
+    <style>
+    .mobile-scroll-container {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+    .matrix-wrapper {
+        display: inline-block;
+        min-width: 600px; /* Matrisin mobilde tamamen kaybolmasını önler */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
+with st.container(border=True):
+    st.markdown('<div class="mobile-scroll-container"><div class="matrix-wrapper">', unsafe_allow_html=True)
+    
+    # Sütun yapısını koruyalım
     col_baslik = st.columns([2.5] + [1]*len(cb_parties))
-    col_baslik[0].markdown("<div style='font-weight:900; color:#888; font-size:14px; margin-top:10px;'>ADAY ADI</div>", unsafe_allow_html=True)
-    
+    col_baslik[0].markdown("<div style='font-size:12px; font-weight:900;'>ADAY</div>", unsafe_allow_html=True)
     for i, p in enumerate(cb_parties):
-        c = party_colors.get(p, c_text)
-        col_baslik[i+1].markdown(f"<div style='text-align:center; font-weight:900; color:{c}; font-size:15px; margin-top:10px;'>{p}</div>", unsafe_allow_html=True)
+        c = party_colors.get(p, "#888")
+        col_baslik[i+1].markdown(f"<div style='text-align:center; font-size:11px; color:{c}; font-weight:900;'>{p}</div>", unsafe_allow_html=True)
     
-    st.markdown("<hr style='margin: 10px 0; border-width: 2px;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
     
     for idx, cand in enumerate(st.session_state.cb_cands_1):
         r_cols = st.columns([2.5] + [1]*len(cb_parties))
-        cand["name"] = r_cols[0].text_input(f"Aday {idx}", value=cand["name"], label_visibility="collapsed", key=f"c1_n_{idx}")
+        cand["name"] = r_cols[0].text_input(f"n_{idx}", value=cand["name"], label_visibility="collapsed", key=f"c1_n_{idx}")
         for i, p in enumerate(cb_parties):
-            cand["votes"][p] = r_cols[i+1].number_input(f"{p}_{idx}", value=cand["votes"].get(p, 0), min_value=0, max_value=100, label_visibility="collapsed", key=f"c1_v_{idx}_{p}")
+            # Mobilde input kutularının çok geniş olmaması için key ve boyut yönetimi
+            cand["votes"][p] = r_cols[i+1].number_input(f"v_{idx}_{p}", value=cand["votes"].get(p, 0), min_value=0, max_value=100, label_visibility="collapsed", key=f"c1_v_{idx}_{p}")
 
     st.markdown("</div></div>", unsafe_allow_html=True)
 
