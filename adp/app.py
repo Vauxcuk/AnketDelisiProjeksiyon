@@ -25,24 +25,17 @@ else:
     st.sidebar.markdown("### AD PROJEKSİYON")
 
 st.sidebar.write("")
-is_light_mode = st.sidebar.toggle("🌞 Açık Tema (Light Mode)", value=False)
 
-if is_light_mode:
-    c_bg = "#f8f9fa"          
-    c_text = "#181720"        
-    c_border = "#181720"      
-    t_seat_bg = "#181720"     
-    t_bar_bg = "#e9ecef"      
-    sidebar_input_bg = "#ffffff"
-    sidebar_input_border = "#cccccc"
-else:
-    c_bg = "#181720"
-    c_text = "#ffffff"
-    c_border = "#ffffff"
-    t_seat_bg = "#333333"
-    t_bar_bg = "#23222d"
-    sidebar_input_bg = "#23222d"
-    sidebar_input_border = "#444444"
+# ==========================================
+# ZORUNLU KOYU TEMA (Light Mode Kaldırıldı)
+# ==========================================
+c_bg = "#181720"
+c_text = "#ffffff"
+c_border = "#ffffff"
+t_seat_bg = "#333333"
+t_bar_bg = "#23222d"
+sidebar_input_bg = "#23222d"
+sidebar_input_border = "#444444"
 
 custom_theme_css = f"""
 <style>
@@ -523,9 +516,178 @@ if 'joint_list' not in st.session_state:
     st.session_state.joint_list = []
     st.session_state.next_jl_id = 1
 
+if 'active_parties' not in st.session_state:
+    # İstenen özel sıralama (Sistemdeki 'ZAFER' ZP olarak kabul edildi)
+    ozel_sira = ["AKP", "YENI", "DEM", "MHP", "IYI", "YRP", "A", "ZAFER", "TIP", "SAADET", "BBP", "CHP"]
+    
+    # Önce özel sıradakileri al, listede olmayan başka (sonradan eklenen) parti varsa sonuna ekle
+    st.session_state.active_parties = [p for p in ozel_sira if p in PARTIES] + [p for p in PARTIES if p not in ozel_sira]
+
 st.sidebar.header("Ulusal Oy Oranları")
-user_inputs = {p: st.sidebar.number_input(f"{p} (%)", min_value=0.0, max_value=100.0, value=custom_start_values.get(p, float(base_national_dict.get(p, 0.0))), step=0.1, key=f"inp_{p}") for p in PARTIES}
+
+st.sidebar.markdown(f"""
+<style>
+/* Daha az yer kaplayan, ince kart yapısı */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] {{
+    padding: 4px 8px !important;
+    margin-bottom: 8px !important;
+    border: 3px solid {c_text} !important;
+    border-left: 8px solid #eb252d !important;
+    box-shadow: 3px 3px 0px {c_text} !important;
+    border-radius: 0px !important;
+    background-color: {sidebar_input_bg} !important;
+}}
+
+/* Tüm Sütunları Dikeyde Tam Ortala (CSS Güvencesi) */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stHorizontalBlock"] {{
+    align-items: center !important;
+}}
+
+/* Streamlit'in kendi bıraktığı gereksiz boşlukları sıfırlama */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] .stMarkdown {{
+    margin-bottom: 0px !important;
+}}
+
+/* Oy Giriş Kutusu */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"] {{
+    height: 32px !important;
+    border: 2px solid {c_text} !important;
+    box-shadow: none !important;
+    background-color: #ffffff !important;
+    min-width: 55px !important; 
+}}
+
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] input {{
+    padding: 0px 4px !important;
+    font-weight: 900 !important;
+    color: #3485fd !important;
+    font-size: 15px !important;
+    text-align: center !important;
+}}
+
+/* Hiza Düzeltmeleri - Hepsi Sabit 32px Yüksekliğe ve Ortalamaya Ayarlandı */
+.party-card-name {{
+    font-weight: 900;
+    font-size: 16px;
+    color: {c_text};
+    white-space: nowrap;
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    height: 32px;
+}}
+
+.party-logo-box {{
+    width: 32px; 
+    height: 32px; 
+    border: 2px solid {c_text}; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}}
+
+.party-logo-box img {{
+    max-width: 80%;
+    max-height: 80%;
+    object-fit: contain;
+}}
+
+.pct-sign {{
+    font-weight: 900;
+    font-size: 15px;
+    color: {c_text};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+}}
+
+/* Silme Tuşu - CSS ile Doğrudan Hedefleme (Wrapper kullanmadan) */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] button {{
+    background-color: #eb252d !important;
+    color: white !important;
+    border: 2px solid {c_text} !important;
+    padding: 0px !important;
+    height: 32px !important;
+    width: 100% !important;
+    min-width: 32px !important; /* Butonun ezilmesini kesin olarak engeller */
+    box-shadow: 2px 2px 0px {c_text} !important;
+    border-radius: 0px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}}
+
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] button p {{
+    font-size: 16px !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+}}
+
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] button:hover {{
+    background-color: #181720 !important;
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px {c_text} !important;
+}}
+</style>
+""", unsafe_allow_html=True)
+
+user_inputs = {}
+parties_to_remove = []
+
+for p in st.session_state.active_parties:
+    varsayilan_oy = custom_start_values.get(p, float(base_national_dict.get(p, 0.0)))
+    party_color = party_colors.get(p, "#888")
+    
+    with st.sidebar.container(border=True):
+        # Eğer sürümün yeniyse vertical_alignment="center" kendi ortalayacaktır
+        try:
+            cols = st.columns([0.16, 0.32, 0.32, 0.05, 0.15], gap="small", vertical_alignment="center")
+        except TypeError:
+            cols = st.columns([0.16, 0.32, 0.32, 0.05, 0.15], gap="small")
+        
+        with cols[0]:
+            logo_data = get_party_logo_base64(p)
+            if logo_data:
+                st.markdown(f'<div class="party-logo-box" style="background-color: {party_color};"><img src="{logo_data}"></div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="party-logo-box" style="background-color: {party_color};"></div>', unsafe_allow_html=True)
+        
+        with cols[1]:
+            st.markdown(f'<div class="party-card-name">{p}</div>', unsafe_allow_html=True)
+            
+        with cols[2]:
+            val = st.number_input(f"oy_{p}", min_value=0.0, max_value=100.0, value=st.session_state.get(f"inp_{p}", varsayilan_oy), step=0.1, key=f"inp_{p}", label_visibility="collapsed")
+            user_inputs[p] = val
+            
+        with cols[3]:
+            st.markdown('<div class="pct-sign">%</div>', unsafe_allow_html=True)
+            
+        with cols[4]:
+            if st.button("🗑️", key=f"del_p_{p}"):
+                parties_to_remove.append(p)
+
+# Silinen partileri motorda hata vermemesi için %0.0 oy ile arka planda tut
+for p in PARTIES:
+    if p not in st.session_state.active_parties:
+        user_inputs[p] = 0.0
+
+if parties_to_remove:
+    for rp in parties_to_remove:
+        st.session_state.active_parties.remove(rp)
+        if f"inp_{rp}" in st.session_state:
+            del st.session_state[f"inp_{rp}"]
+    st.rerun()
+
+# Eğer parti silinmişse, geri getirme butonu çıkar
+if len(st.session_state.active_parties) < len(PARTIES):
+    st.sidebar.markdown("<br>", unsafe_allow_html=True)
+    if st.sidebar.button("🔄 Çıkarılan Partileri Geri Getir", use_container_width=True):
+        st.session_state.active_parties = PARTIES.copy()
+        st.rerun()
+
 st.sidebar.divider()
+
 with st.sidebar.expander("🛠️ YENİ PARTİ EKLE", expanded=False):
     st.caption("Yeni partinin hangi partilerin tabanından yüzde kaç oy çekeceğini ve rengini belirleyin.")
     new_p_name = st.text_input("Parti Kısaltması (Örn: VKP)", max_chars=12).upper()
