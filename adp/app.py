@@ -370,9 +370,15 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
                 if 'style' in path.attrs:
                     style_dict = {item.split(':')[0].strip(): item.split(':')[1].strip() for item in path['style'].split(';') if ':' in item}
                     style_dict['fill'] = color
+                    style_dict['stroke'] = '#181720'
+                    style_dict['stroke-width'] = '8'
+                    style_dict['stroke-linejoin'] = 'round'
                     path['style'] = ';'.join([f"{k}:{v}" for k, v in style_dict.items()])
                 else:
                     path['fill'] = color
+                    path['stroke'] = '#181720'
+                    path['stroke-width'] = '8'
+                    path['stroke-linejoin'] = 'round'
                     
                 if tooltip_dict:
                     path['data-tooltip'] = tooltip_dict.get(svg_id_norm, f"<b>{raw_id}</b><br>1. Sırada: {winner}")
@@ -471,24 +477,35 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
     svg += f'<svg x="30" y="195" width="1120" height="520">{map_svg_clean}</svg>'
 
     main_logo_data = get_svg_file_base64(os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.svg"))
-    svg += '<g transform="translate(60, 790)">'
+    # Görseldeki gibi en alt sol köşeye dayalı ve daha orantılı yerleşim
+    svg += '<g transform="translate(30, 870)">'
     if main_logo_data:
-        svg += f'<image href="{main_logo_data}" x="0" y="0" width="260" height="110" preserveAspectRatio="xMidYMid meet" />'
+        svg += f'<image href="{main_logo_data}" x="0" y="0" width="320" height="75" preserveAspectRatio="xMinYMin meet" />'
     else:
-        svg += '<text x="0" y="50" font-size="28" font-weight="900" fill="#eb252d">AD PROJEKSİYON</text><text x="0" y="80" font-size="15" font-weight="700" fill="#181720">Seçim Simülasyonu</text>'
+        svg += '<text x="0" y="50" font-size="32" font-weight="900" fill="#eb252d">AD PROJEKSİYON</text>'
     svg += '</g>'
 
-    radii = list(range(90, 230, 16))
+    # Görseldeki gibi sıkı dizilimli ve inceltilmiş (iç yarıçapı 125 olan) SVG parlamentosu
+    radii = list(range(125, 245, 10)) 
     sum_radii = sum(radii)
     seats_per_row = [round(total_seats * (r / sum_radii)) for r in radii]
     if sum(seats_per_row) != total_seats: seats_per_row[-1] += (total_seats - sum(seats_per_row))
     
     points = sorted([{'x': r * math.cos(math.pi - (math.pi * j) / max(1, (s - 1))), 'y': r * math.sin(math.pi - (math.pi * j) / max(1, (s - 1))), 'angle': math.pi - (math.pi * j) / max(1, (s - 1)), 'r': r} for r, s in zip(radii, seats_per_row) if s > 0 for j in range(s)], key=lambda p: (p['angle'], -p['r']), reverse=True)
 
-    svg += '<g transform="translate(960, 930)">'
+    # Grafik sağ sınıra yapışmasın diye translate(960, 930) yerine translate(910, 930) kullanıldı.
+    svg += '<g transform="translate(910, 930)">'
+    
+    # 1. Önce noktalar çiziliyor
     for i, party in enumerate(assigned_parties):
-        if i < len(points): svg += f'<circle cx="{points[i]["x"]}" cy="{-points[i]["y"]}" r="3.8" fill="{party_colors.get(party, "#888")}" stroke="#ffffff" stroke-width="0.4"/>'
-    svg += f'<text x="0" y="-12" text-anchor="middle" font-size="38" font-weight="900" fill="#181720">{total_seats}</text></g></svg>'
+        if i < len(points): svg += f'<circle cx="{points[i]["x"]}" cy="{-points[i]["y"]}" r="4.3" fill="{party_colors.get(party, "#888")}" />'
+    
+    # 2. İnfografikte de Çoğunluk Çizgisi noktalardan sonra çiziliyor
+    svg += f'<text x="0" y="-250" text-anchor="middle" font-size="14" font-weight="900" fill="#181720">Çoğunluk</text>'
+    svg += f'<line x1="0" y1="-242" x2="0" y2="-122" stroke="#181720" stroke-width="2.5" stroke-dasharray="5,5"/>'
+    
+    # 3. Toplam sayı
+    svg += f'<text x="0" y="-12" text-anchor="middle" font-size="44" font-weight="900" fill="#181720">{total_seats}</text></g></svg>'
     return svg
 
 # ==========================================
@@ -643,22 +660,38 @@ with tab_meclis:
         sirali_partiler = [p for p in ['TIP', 'DEM', 'CHP', 'YENI', 'IYI', 'SAADET', 'ZAFER', 'A', 'AKP', 'MHP', 'BBP', 'YRP'] if p in national_summary_df['Parti'].values] + [p for p in national_summary_df['Parti'].values if p not in ['TIP', 'DEM', 'CHP', 'YENI', 'IYI', 'SAADET', 'ZAFER', 'A', 'AKP', 'MHP', 'BBP', 'YRP']]
         assigned_parties = [p for p in sirali_partiler for _ in range(int(national_summary_df[national_summary_df['Parti'] == p]['Vekil'].values[0]))]
 
-        fig = go.Figure()
+        # --- DİNAMİK VE ÖLÇEKLENEBİLİR SVG MECLİS GRAFİĞİ ---
         if toplam_vekil > 0:
-            radii, sum_radii = list(range(10, 22)), sum(range(10, 22))
+            # Yay daha ince dursun diye iç yarıçap 125'e çekildi (daha geniş orta boşluk)
+            radii = list(range(125, 245, 10)) 
+            sum_radii = sum(radii)
             seats_per_row = [round(toplam_vekil * (r / sum_radii)) for r in radii]
-            if sum(seats_per_row) != toplam_vekil: seats_per_row[-1] += toplam_vekil - sum(seats_per_row)
+            if sum(seats_per_row) != toplam_vekil: seats_per_row[-1] += (toplam_vekil - sum(seats_per_row))
+            
             points = sorted([{'x': r * math.cos(math.pi - (math.pi * j) / max(1, (s - 1))), 'y': r * math.sin(math.pi - (math.pi * j) / max(1, (s - 1))), 'angle': math.pi - (math.pi * j) / max(1, (s - 1)), 'r': r} for r, s in zip(radii, seats_per_row) if s > 0 for j in range(s)], key=lambda p: (p['angle'], -p['r']), reverse=True)
-            for p in sirali_partiler:
-                p_indices = [i for i, party in enumerate(assigned_parties) if party == p]
-                if p_indices: fig.add_trace(go.Scatter(x=[points[i]['x'] for i in p_indices if i < len(points)], y=[points[i]['y'] for i in p_indices if i < len(points)], mode='markers', name=p, marker=dict(size=8.5, color=party_colors.get(p, "#888888"), line=dict(width=0.5, color=c_bg)), hoverinfo='text', hovertext=[f"{p}"] * len(p_indices)))
-            fig.add_shape(type="line", x0=0, y0=9, x1=0, y1=22.5, line=dict(color="#ffffff", width=2, dash="dashdot"))
-            fig.add_annotation(x=0, y=23.8, text="<b>Çoğunluk</b>", showarrow=False, font=dict(color="#ffffff", size=15))
-            fig.add_annotation(x=0, y=2, xref='x', yref='y', text=f"<b><span style='font-size:38px; color:{c_text}'>{toplam_vekil}</span></b>", yanchor='middle', xanchor='center', showarrow=False)
 
-        fig.update_layout(showlegend=False, margin=dict(t=40, b=10, l=15, r=15), height=max(450, (len(national_summary_df) * 52) + 65), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False, scaleanchor="y", scaleratio=1, fixedrange=True), yaxis=dict(visible=False, fixedrange=True), dragmode=False)
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False, 'doubleClick': False, 'showTips': False})
-
+            # ViewBox yukarıdan yazı kesilmesin diye "-5" ile başlatıldı
+            ui_svg = f'<svg viewBox="0 -5 500 270" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">'
+            
+            # 1. ÖNCE VEKİL NOKTALARINI ÇİZİYORUZ (Arka planda kalmaları için)
+            for i, party in enumerate(assigned_parties):
+                if i < len(points):
+                    cx = 250 + points[i]['x']
+                    cy = 250 - points[i]['y']
+                    color = party_colors.get(party, "#888888")
+                    ui_svg += f'<circle cx="{cx}" cy="{cy}" r="4.3" fill="{color}" />'
+            
+            # 2. SONRA ÇOĞUNLUK ÇİZGİSİNİ ÇİZİYORUZ (Noktaların üstüne binmesi için)
+            ui_svg += f'<text x="250" y="5" text-anchor="middle" font-size="12" font-weight="bold" fill="{c_text}">Çoğunluk</text>'
+            ui_svg += f'<line x1="250" y1="12" x2="250" y2="130" stroke="{c_text}" stroke-width="2" stroke-dasharray="4,4"/>'
+            
+            # 3. TOPLAM SAYI
+            ui_svg += f'<text x="250" y="240" text-anchor="middle" font-size="46" font-weight="900" fill="{c_text}">{toplam_vekil}</text>'
+            ui_svg += '</svg>'
+            
+            # Ekrana basma
+            st.markdown(f"<div style='text-align:center; padding: 20px 0;'>{ui_svg}</div>", unsafe_allow_html=True)
+            
     # --- GENEL SEÇİM İL HARİTASI VE ISI HARİTASI ---
     st.markdown("<br>", unsafe_allow_html=True)
     col_m_title, col_m_filter = st.columns([1.5, 1])
@@ -779,7 +812,7 @@ with tab_meclis:
         target_party_swing = st.selectbox("Hangi parti için fırsat / risk analizi yapılsın?", options=[p for p in national_summary_df['Parti'].tolist() if national_summary_df[national_summary_df['Parti'] == p]['Vekil'].values[0] > 0 or display_user_nat.get(p, 0) > 1.0], index=0)
 
         qualified_parties_sw = [p for aly, vote in {aly: sum([display_user_nat.get(pt, 0) for pt in pts]) for aly, pts in alliances.items()}.items() if vote >= p_threshold for p in alliances[aly]]
-        multipliers = {p: (user_inputs_norm[p] / base_national_dict[p]) if base_national_dict.get(p, 0) > 0 else 0 for p in PARTIES}
+        multipliers = {p: (user_inputs_norm.get(p, 0) / base_national_dict[p]) if base_national_dict.get(p, 0) > 0 else 0 for p in PARTIES}
         swing_data = []
 
         for district, group in df_base.groupby('district'):
