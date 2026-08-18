@@ -499,7 +499,7 @@ def render_colored_svg_cached(prov_winners_json, dist_winners_json, colors_dict_
             'sakarya': (510, 215), 'gaziantep': (1300, 760), 'denizli': (370, 670),
             'kutahya': (395, 430), 'amasya': (1100, 210), 'trabzon': (1560, 185),
             'artvin': (1790, 145), 'gaziantep': (1300, 760), 'denizli': (370, 670),
-            'diyarbakir': (1615, 510), 'duzce': (580, 180), 'sinop': (1015, 65),
+            'diyarbakir': (1615, 610), 'duzce': (580, 180), 'sinop': (1015, 65),
         }
         
         for path in paths:
