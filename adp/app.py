@@ -226,6 +226,25 @@ custom_theme_css = f"""
     [data-testid="stHeader"] {{
         background-color: transparent !important;
     }}
+
+    /* Mobil Cihazlar İçin Otomatik Sütun Düzenlemesi (Ekran < 768px) */
+    @media (max-width: 768px) {{
+        [data-testid="stHorizontalBlock"] {{
+            flex-direction: column !important;
+        }}
+        [data-testid="column"] {{
+            width: 100% !important;
+            flex: 1 1 auto !important;
+            min-width: 100% !important;
+        }}
+    }}
+
+    /* Mobil ekranlarda yatay taşmaları kaydırma çubuğuna bağla */
+    div[data-testid="stVerticalBlockBorderWrapper"] {{
+        max-width: 100% !important;
+        overflow-x: auto !important;
+    }}
+
 </style>
 """
 st.markdown(custom_theme_css, unsafe_allow_html=True)
@@ -1059,7 +1078,16 @@ if 'cb_cands_1' not in st.session_state:
 
 st.subheader("1. Tur Senaryosu")
 
+# ÖZEL MATRİS (Mobilde taşmayı önleyen yatay kaydırmalı Neobrutalist Kapsayıcı)
 with st.container(border=True):
+    st.markdown(
+        f"""
+        <div style="width: 100%; overflow-x: auto; padding-bottom: 10px;">
+            <div style="min-width: {800 + (len(cb_parties) * 60)}px;">
+        """, 
+        unsafe_allow_html=True
+    )
+
     col_baslik = st.columns([2.5] + [1]*len(cb_parties))
     col_baslik[0].markdown("<div style='font-weight:900; color:#888; font-size:14px; margin-top:10px;'>ADAY ADI</div>", unsafe_allow_html=True)
     
@@ -1075,11 +1103,7 @@ with st.container(border=True):
         for i, p in enumerate(cb_parties):
             cand["votes"][p] = r_cols[i+1].number_input(f"{p}_{idx}", value=cand["votes"].get(p, 0), min_value=0, max_value=100, label_visibility="collapsed", key=f"c1_v_{idx}_{p}")
 
-if st.button("➕ YENİ ADAY EKLE", key="add_cand_1"):
-    st.session_state.cb_cands_1.append({"name": f"Aday {len(st.session_state.cb_cands_1)+1}", "votes": {p: 0 for p in cb_parties}})
-    st.rerun()
-
-st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 # İŞLEM VE HARİTA FONKSİYONU (MATRİS ÇARPIMI İLE HIZLANDIRILDI)
 @st.cache_data(show_spinner=False)
