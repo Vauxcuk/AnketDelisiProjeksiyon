@@ -1178,45 +1178,40 @@ if 'cb_cands_1' not in st.session_state:
 
 st.subheader("1. Tur Senaryosu")
 
-# Mobil ve Desktop için optimize edilmiş kapsayıcı
-st.markdown(
-    """
-    <style>
-    .mobile-scroll-container {
-        width: 100%;
+# 1. CSS ile sütunların mobilde bile yan yana kalmasını zorla
+st.markdown("""
+<style>
+    /* Sütunların mobilde alt alta gelmesini engelle */
+    [data-testid="column"] {
+        width: calc(100% / 12) !important;
+        flex: 1 1 auto !important;
+        min-width: 50px !important; /* Her sütun için min genişlik */
+    }
+    .scroll-x {
         overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        white-space: nowrap;
+        padding-bottom: 10px;
     }
-    .matrix-wrapper {
-        display: inline-block;
-        min-width: 600px; /* Matrisin mobilde tamamen kaybolmasını önler */
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+</style>
+""", unsafe_allow_html=True)
 
+# 2. Matrisi bir kaydırılabilir div içine al
+st.markdown('<div class="scroll-x">', unsafe_allow_html=True)
 with st.container(border=True):
-    st.markdown('<div class="mobile-scroll-container"><div class="matrix-wrapper">', unsafe_allow_html=True)
-    
-    # Sütun yapısını koruyalım
+    # Başlık Sütunları
     col_baslik = st.columns([2.5] + [1]*len(cb_parties))
-    col_baslik[0].markdown("<div style='font-size:12px; font-weight:900;'>ADAY</div>", unsafe_allow_html=True)
+    col_baslik[0].markdown("<b style='font-size:11px;'>ADAY</b>", unsafe_allow_html=True)
     for i, p in enumerate(cb_parties):
-        c = party_colors.get(p, "#888")
-        col_baslik[i+1].markdown(f"<div style='text-align:center; font-size:11px; color:{c}; font-weight:900;'>{p}</div>", unsafe_allow_html=True)
+        col_baslik[i+1].markdown(f"<b style='font-size:10px; color:{party_colors.get(p)};'>{p}</b>", unsafe_allow_html=True)
     
-    st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin:5px 0;'>", unsafe_allow_html=True)
     
+    # Veri Satırları
     for idx, cand in enumerate(st.session_state.cb_cands_1):
         r_cols = st.columns([2.5] + [1]*len(cb_parties))
-        cand["name"] = r_cols[0].text_input(f"n_{idx}", value=cand["name"], label_visibility="collapsed", key=f"c1_n_{idx}")
+        r_cols[0].text_input(f"ad_{idx}", value=cand["name"], label_visibility="collapsed", key=f"c1_n_{idx}")
         for i, p in enumerate(cb_parties):
-            # Mobilde input kutularının çok geniş olmaması için key ve boyut yönetimi
-            cand["votes"][p] = r_cols[i+1].number_input(f"v_{idx}_{p}", value=cand["votes"].get(p, 0), min_value=0, max_value=100, label_visibility="collapsed", key=f"c1_v_{idx}_{p}")
-
-    st.markdown("</div></div>", unsafe_allow_html=True)
+            r_cols[i+1].number_input(f"v_{idx}_{p}", value=cand["votes"].get(p, 0), min_value=0, max_value=100, label_visibility="collapsed", key=f"c1_v_{idx}_{p}")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # İŞLEM VE HARİTA FONKSİYONU (MATRİS ÇARPIMI İLE HIZLANDIRILDI)
 @st.cache_data(show_spinner=False)
