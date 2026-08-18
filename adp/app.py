@@ -866,17 +866,29 @@ with col2:
         num_rows = len(national_summary_df)
         dynamic_height = max(450, (num_rows * 52) + 65)
 
+# Eksenleri ve etkileşimleri tamamen sabitleyen (zoom/pan kapalı) layout ayarı
         fig.update_layout(
             showlegend=False, 
-            margin=dict(t=40, b=20, l=15, r=15), 
+            margin=dict(t=40, b=10, l=15, r=15), 
             height=dynamic_height, 
             paper_bgcolor='rgba(0,0,0,0)', 
             plot_bgcolor='rgba(0,0,0,0)',
-            xaxis=dict(visible=False, scaleanchor="y", scaleratio=1),
-            yaxis=dict(visible=False)
+            xaxis=dict(visible=False, scaleanchor="y", scaleratio=1, fixedrange=True),
+            yaxis=dict(visible=False, fixedrange=True),
+            dragmode=False  # <--- BURAYI BÜYÜK HARFLE 'False' YAPIN
         )
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
+        
+        # Yakınlaştırma, kaydırma ve menü çubuğunu tamamen kapatan config
+        st.plotly_chart(
+            fig, 
+            use_container_width=True, 
+            config={
+                'displayModeBar': False, 
+                'scrollZoom': False,
+                'doubleClick': False,
+                'showTips': False
+            }
+        )
 # --- MECLİS SVG HARİTA BÖLÜMÜ ---
 st.subheader("Genel Seçim İl Haritası")
 with st.container(border=True):
