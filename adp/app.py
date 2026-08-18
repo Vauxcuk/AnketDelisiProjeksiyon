@@ -497,6 +497,9 @@ def render_colored_svg_cached(prov_winners_json, dist_winners_json, colors_dict_
             'giresun': (1415, 210), 'osmaniye': (1155, 745), 'ankara3': (690, 300),
             'ankara2': (790, 300), 'agri': (1925, 375), 'kayseri': (1100, 525),
             'sakarya': (510, 215), 'gaziantep': (1300, 760), 'denizli': (370, 670),
+            'kutahya': (395, 430), 'amasya': (1100, 210), 'trabzon': (1560, 185),
+            'artvin': (1790, 145), 'gaziantep': (1300, 760), 'denizli': (370, 670),
+            'diyarbakir': (1615, 510), 'duzce': (580, 180), 'sinop': (1015, 65),
         }
         
         for path in paths:
@@ -1151,7 +1154,7 @@ with tab_meclis:
         st.dataframe(styled_table, use_container_width=True)
 
     # --- SWING MODÜLÜ ---
-    with st.expander("🎯 Fırsat ve Risk Analizi (Swing Modülü)", expanded=False):
+    with st.expander("🎯 Fırsat ve Risk Analizi", expanded=False):
         st.info("Bu modül, en az oy farkıyla kazanılan veya el değiştirmeye en yakın vekillikleri gösterir. Stratejik odaklanma için kritik bölgelerdir.")
 
         aktif_partiler = national_summary_df['Parti'].tolist()
