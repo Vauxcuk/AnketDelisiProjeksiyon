@@ -1178,40 +1178,57 @@ if 'cb_cands_1' not in st.session_state:
 
 st.subheader("1. Tur Senaryosu")
 
-# 1. CSS ile sütunların mobilde bile yan yana kalmasını zorla
+# PC'de başlıkları gösteren, mobilde gizleyip renkli kutular oluşturan CSS
 st.markdown("""
 <style>
-    /* Sütunların mobilde alt alta gelmesini engelle */
-    [data-testid="column"] {
-        width: calc(100% / 12) !important;
-        flex: 1 1 auto !important;
-        min-width: 50px !important; /* Her sütun için min genişlik */
+    /* Mobilde sütun başlıklarını gizle, PC'de göster */
+    @media (max-width: 768px) {
+        .desktop-header { display: none !important; }
     }
-    .scroll-x {
-        overflow-x: auto;
-        padding-bottom: 10px;
+    @media (min-width: 769px) {
+        .desktop-header { display: block !important; }
+    }
+    
+    /* Input kutularının etrafını partinin rengiyle çevrele ve arka planına hafif renk ver */
+    .stNumberInput input {
+        border-radius: 6px !important;
+        text-align: center;
+        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. Matrisi bir kaydırılabilir div içine al
-st.markdown('<div class="scroll-x">', unsafe_allow_html=True)
 with st.container(border=True):
-    # Başlık Sütunları
+    # PC için Renkli Parti Başlıkları (Mobilde gizlenir)
     col_baslik = st.columns([2.5] + [1]*len(cb_parties))
-    col_baslik[0].markdown("<b style='font-size:11px;'>ADAY</b>", unsafe_allow_html=True)
+    col_baslik[0].markdown("<div class='desktop-header' style='font-size:11px; font-weight:900;'>ADAY</div>", unsafe_allow_html=True)
     for i, p in enumerate(cb_parties):
-        col_baslik[i+1].markdown(f"<b style='font-size:10px; color:{party_colors.get(p)};'>{p}</b>", unsafe_allow_html=True)
+        c = party_colors.get(p, "#888")
+        col_baslik[i+1].markdown(f"<div class='desktop-header' style='text-align:center; font-size:10px; color:{c}; font-weight:900;'>{p}</div>", unsafe_allow_html=True)
     
-    st.markdown("<hr style='margin:5px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin:5px 0;' class='desktop-header'>", unsafe_allow_html=True)
     
     # Veri Satırları
     for idx, cand in enumerate(st.session_state.cb_cands_1):
         r_cols = st.columns([2.5] + [1]*len(cb_parties))
-        r_cols[0].text_input(f"ad_{idx}", value=cand["name"], label_visibility="collapsed", key=f"c1_n_{idx}")
+        
+        with r_cols[0]:
+            cand["name"] = st.text_input(f"Aday Adı {idx}", value=cand["name"], label_visibility="collapsed", key=f"c1_n_{idx}")
+            
         for i, p in enumerate(cb_parties):
-            r_cols[i+1].number_input(f"v_{idx}_{p}", value=cand["votes"].get(p, 0), min_value=0, max_value=100, label_visibility="collapsed", key=f"c1_v_{idx}_{p}")
-st.markdown('</div>', unsafe_allow_html=True)
+            c_hex = party_colors.get(p, "#888")
+            with r_cols[i+1]:
+                # Parti ismini tool-tip (üzerine gelince) veya mobil için minik bir label yerine 
+                # kutunun dışına o renkte küçük bir parti etiketi koyarak da destekleyebiliriz.
+                # Burada doğrudan input'u çiziyoruz:
+                cand["votes"][p] = st.number_input(
+                    f"{p} Oyu", 
+                    value=cand["votes"].get(p, 0), 
+                    min_value=0, 
+                    max_value=100, 
+                    label_visibility="collapsed", 
+                    key=f"c1_v_{idx}_{p}"
+                )
 
 # İŞLEM VE HARİTA FONKSİYONU (MATRİS ÇARPIMI İLE HIZLANDIRILDI)
 @st.cache_data(show_spinner=False)
