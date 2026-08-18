@@ -6,6 +6,7 @@ import streamlit.components.v1 as components
 import plotly.graph_objects as go
 import json
 import copy
+import io
 
 # ==========================================
 # SAYFA AYARLARI VE DİNAMİK TEMA MOTORU
@@ -325,11 +326,15 @@ def calculate_dhondt(votes_dict, seat_count):
 
 @st.cache_data(show_spinner=False)
 def run_simulation_cached(base_df_json, base_nat_json, user_nat_json, alliances_json, joint_lists_json, threshold):
-    base_df = pd.read_json(base_df_json, orient='records')
+    # BURAYI DEĞİŞTİRDİK (io.StringIO eklendi)
+    base_df = pd.read_json(io.StringIO(base_df_json), orient='records')
+    
     base_nat = json.loads(base_nat_json)
     user_nat = json.loads(user_nat_json)
     alliances = json.loads(alliances_json)
     joint_lists = json.loads(joint_lists_json)
+
+    # ... (Fonksiyonun geri kalanı aynı kalacak) ...
 
     working_nat = user_nat.copy()
     for umbrella, joiners in joint_lists.items():
@@ -1020,9 +1025,14 @@ st.markdown("<br>", unsafe_allow_html=True)
 @st.cache_data(show_spinner=False)
 def calculate_cb_district_results_cached(cands_list_json, df_results_data_json, colors_override_json, cb_parties_json):
     cands_list = json.loads(cands_list_json)
-    df_results_data = pd.read_json(df_results_data_json, orient='records')
+    
+    # BURAYI DEĞİŞTİRDİK (io.StringIO eklendi)
+    df_results_data = pd.read_json(io.StringIO(df_results_data_json), orient='records')
+    
     colors_override = json.loads(colors_override_json)
     cb_parties_list = json.loads(cb_parties_json)
+
+    # ... (Fonksiyonun geri kalanı aynı kalacak) ...
 
     pivot_dist_votes = df_results_data.pivot(index='district', columns='party', values='new_vote_pct').fillna(0)
     
