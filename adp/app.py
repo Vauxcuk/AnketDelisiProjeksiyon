@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 import os
 import streamlit.components.v1 as components
 import plotly.graph_objects as go
+import json
+import copy
 
 # ==========================================
 # SAYFA AYARLARI VE DİNAMİK TEMA MOTORU
@@ -67,72 +69,118 @@ custom_theme_css = f"""
         color: {c_text} !important;
     }}
 
+    /* SİDEBAR VE GİRDİLER */
     section[data-testid="stSidebar"] {{
         background-color: {c_bg} !important;
-        border-right: 1px solid {c_border} !important;
+        border-right: 3px solid {c_text} !important;
         transition: background-color 0.3s;
     }}
     
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] label {{
-        color: {c_text} !important;
-    }}
-    
-    section[data-testid="stSidebar"] h1, 
-    section[data-testid="stSidebar"] h2, 
-    section[data-testid="stSidebar"] h3 {{
-        text-shadow: none !important;
-        letter-spacing: normal;
-        color: {c_text} !important;
-        font-weight: 700 !important;
-    }}
-
+    /* 🟥 TÜM GİRDİ VE SEÇİM KUTULARINDA KESKİN KÖŞELER (0px) 🟥 */
+    div[data-baseweb="input"],
+    div[data-baseweb="base-input"],
+    div[data-baseweb="select"],
+    div[data-baseweb="select"] > div,
+    [data-testid="stNumberInput"] div[data-baseweb="input"],
+    [data-testid="stTextInput"] div[data-baseweb="input"],
     section[data-testid="stSidebar"] .stNumberInput input, 
-    section[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"], 
     section[data-testid="stSidebar"] .stTextInput input,
+    [data-testid="stNumberInput"] input,
+    [data-testid="stTextInput"] input,
     [data-baseweb="popover"] {{
         background-color: {sidebar_input_bg} !important;
         color: {c_text} !important;
-        border: 1px solid {sidebar_input_border} !important;
-        border-radius: 6px !important;
-        box-shadow: none !important;
+        border: 2px solid {c_text} !important;
+        border-radius: 0px !important;
+        box-shadow: 3px 3px 0px #eb252d !important;
     }}
-    
-    section[data-testid="stSidebar"] .stNumberInput input:focus, 
-    section[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"]:focus-within {{
+
+    div[data-baseweb="input"]:focus-within,
+    div[data-baseweb="select"]:focus-within,
+    [data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within,
+    [data-testid="stTextInput"] div[data-baseweb="input"]:focus-within {{
         border-color: #eb252d !important;
-        box-shadow: 0 0 0 1px #eb252d !important;
+        box-shadow: 0 0 0 2px #eb252d !important;
+    }}
+
+    [data-testid="stNumberInput"] button {{
+        border-radius: 0px !important;
+        border: 1px solid {c_text} !important;
     }}
 
     hr {{
         border-color: #eb252d !important;
-        border-width: 1px !important;
+        border-width: 3px !important;
         border-style: solid !important;
         margin-top: 1.5rem !important;
         margin-bottom: 1.5rem !important;
     }}
     
-    [data-testid="stDataFrame"], [data-testid="stDataEditor"] {{
-        border: 2px solid {c_border};
-        box-shadow: 4px 4px 0px #eb252d;
+    /* 🟥 NEOBRUTALİST KONTEYNER VE KUTULAR 🟥 */
+    div[data-testid="stVerticalBlockBorderWrapper"] {{
+        border: 3px solid {c_text} !important;
+        box-shadow: 6px 6px 0px #eb252d !important;
+        background-color: {c_bg} !important;
+        border-radius: 0px !important;
+        padding: 1.5rem !important;
+        margin-bottom: 1.5rem !important;
+    }}
+
+    div[data-testid="stVerticalBlockBorderWrapper"] *,
+    div[data-testid="stExpander"] * {{
+        border-radius: 0px !important;
+    }}
+    
+    div[data-testid="stExpander"] {{
+        border: 3px solid {c_text} !important;
+        box-shadow: 6px 6px 0px #eb252d !important;
+        background-color: {c_bg} !important;
+        border-radius: 0px !important;
+        margin-bottom: 1.5rem !important;
+    }}
+    
+    div[data-testid="stExpander"] details, 
+    div[data-testid="stExpander"] summary {{
+        border-radius: 0px !important;
+    }}
+    
+    div[data-testid="stExpander"] details summary p {{
+        font-weight: 900 !important;
+        font-size: 1.2rem !important;
+        text-transform: uppercase !important;
+    }}
+
+    /* TABLOLAR VE BUTONLAR */
+    [data-testid="stDataFrame"] {{
+        border-radius: 0px !important;
+        border: 3px solid {c_text} !important;
+        box-shadow: 5px 5px 0px #eb252d !important;
         background-color: {c_bg};
     }}
 
     .stButton>button {{
-        border: 2px solid {c_border} !important;
-        box-shadow: 3px 3px 0px #eb252d !important;
-        font-weight: 800 !important;
-        border-radius: 4px !important;
+        border: 3px solid {c_text} !important;
+        box-shadow: 4px 4px 0px #eb252d !important;
+        font-weight: 900 !important;
+        border-radius: 0px !important;
         text-transform: uppercase !important;
+        color: {c_text} !important;
+        transition: all 0.1s ease-in-out;
+    }}
+    
+    .stButton>button:hover {{
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0px #eb252d !important;
     }}
 
+    /* CB KARTLARI */
     .cb-card {{
         background-color: {c_bg};
-        border: 2px solid {c_border};
-        box-shadow: 4px 4px 0px #eb252d;
+        border: 3px solid {c_text};
+        box-shadow: 5px 5px 0px #eb252d;
         padding: 16px;
         margin-bottom: 15px;
+        border-radius: 0px !important;
     }}
 
     .cb-row {{
@@ -148,19 +196,17 @@ custom_theme_css = f"""
         font-size: 15px;
         text-transform: uppercase;
         color: {c_text};
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }}
 
     .cb-bar-bg {{
         flex-grow: 1;
         background-color: {t_bar_bg};
         height: 34px;
-        border: 2px solid {c_border};
-        box-shadow: 2px 2px 0px #eb252d;
+        border: 2px solid {c_text};
+        box-shadow: 3px 3px 0px #eb252d;
         display: flex;
         overflow: hidden;
+        border-radius: 0px !important;
     }}
 
     .cb-bar-fill {{
@@ -172,6 +218,7 @@ custom_theme_css = f"""
         font-weight: 800;
         font-size: 13px;
         white-space: nowrap;
+        border-radius: 0px !important;
     }}
 
     [data-testid="stHeader"] {{
@@ -182,23 +229,20 @@ custom_theme_css = f"""
 st.markdown(custom_theme_css, unsafe_allow_html=True)
 
 # ==========================================
-# 1. VERİ OKUMA VE NORMALİZASYON
+# 1. VERİ OKUMA VE NORMALİZASYON (CACHED)
 # ==========================================
 def normalize_id(text):
     if not isinstance(text, str): return ""
     replacements = {
-        'I': 'i', 'ı': 'i', 'İ': 'i',
-        'Ğ': 'g', 'ğ': 'g', 
-        'Ü': 'u', 'ü': 'u', 
-        'Ş': 's', 'ş': 's', 
-        'Ö': 'o', 'ö': 'o', 
-        'Ç': 'c', 'ç': 'c'
+        'I': 'i', 'ı': 'i', 'İ': 'i', 'Ğ': 'g', 'ğ': 'g', 
+        'Ü': 'u', 'ü': 'u', 'Ş': 's', 'ş': 's', 
+        'Ö': 'o', 'ö': 'o', 'Ç': 'c', 'ç': 'c'
     }
     for search, replace in replacements.items():
         text = text.replace(search, replace)
     return text.lower().replace('-', '').replace('_', '').replace(' ', '')
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def load_base_data():
     try:
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -253,7 +297,6 @@ def load_base_data():
         
     except FileNotFoundError as e:
         st.error(f"🚨 HATA: Dosya eksik - {str(e)}")
-        st.info("Lütfen 'ysk_2023_secim_verisi.csv' ve 'ysk_2024_secim_verisi.csv' dosyalarının app.py ile aynı klasörde olduğundan emin olun.")
         st.stop()
 
 df_base, base_national_dict = load_base_data()
@@ -269,7 +312,7 @@ party_colors = {
 }
 
 # ==========================================
-# 2. HESAPLAMA MOTORU (D'Hondt & Baraj)
+# 2. HESAPLAMA MOTORU (D'Hondt & Baraj) - CACHED
 # ==========================================
 def calculate_dhondt(votes_dict, seat_count):
     seats_won = {p: 0 for p in votes_dict}
@@ -280,7 +323,14 @@ def calculate_dhondt(votes_dict, seat_count):
         divisors[winner] += 1
     return seats_won
 
-def run_simulation(base_df, base_nat, user_nat, alliances, joint_lists, threshold=7.0):
+@st.cache_data(show_spinner=False)
+def run_simulation_cached(base_df_json, base_nat_json, user_nat_json, alliances_json, joint_lists_json, threshold):
+    base_df = pd.read_json(base_df_json, orient='records')
+    base_nat = json.loads(base_nat_json)
+    user_nat = json.loads(user_nat_json)
+    alliances = json.loads(alliances_json)
+    joint_lists = json.loads(joint_lists_json)
+
     working_nat = user_nat.copy()
     for umbrella, joiners in joint_lists.items():
         for jp in joiners:
@@ -338,16 +388,41 @@ def run_simulation(base_df, base_nat, user_nat, alliances, joint_lists, threshol
             })
     return pd.DataFrame(results)
 
+def run_simulation(base_df, base_nat, user_nat, alliances, joint_lists, threshold=7.0):
+    return run_simulation_cached(
+        base_df.to_json(orient='records'),
+        json.dumps(base_nat),
+        json.dumps(user_nat),
+        json.dumps(alliances),
+        json.dumps(joint_lists),
+        threshold
+    )
+
 # ==========================================
-# 3. SVG HARİTA MOTORU
+# 3. SVG HARİTA MOTORU (TAM ÖNBELLEKLİ - V2)
 # ==========================================
-def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, district_seats_data=None, svg_file_name="turkiye.svg", show_badges=True):
+@st.cache_data(show_spinner=False)
+def load_raw_svg(svg_file_name="turkiye.svg"):
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    svg_file_path = os.path.join(current_dir, svg_file_name)
+    with open(svg_file_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+@st.cache_data(show_spinner=False)
+def render_colored_svg_cached(prov_winners_json, dist_winners_json, colors_dict_json, tooltip_dict_json, district_seats_data_json, svg_file_name, show_badges):
+    prov_winners = json.loads(prov_winners_json)
+    dist_winners = json.loads(dist_winners_json)
+    colors_dict = json.loads(colors_dict_json)
+    tooltip_dict = json.loads(tooltip_dict_json)
+    
+    district_seats_data = None
+    if district_seats_data_json:
+        raw_seats = json.loads(district_seats_data_json)
+        district_seats_data = {tuple(k.split('|')): v for k, v in raw_seats.items()}
+
     try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        svg_file_path = os.path.join(current_dir, svg_file_name)
-        
-        with open(svg_file_path, 'r', encoding='utf-8') as f:
-            soup = BeautifulSoup(f.read(), 'html.parser')
+        raw_svg_content = load_raw_svg(svg_file_name)
+        soup = BeautifulSoup(raw_svg_content, 'html.parser')
             
         svg_tag = soup.find('svg') or soup.find('svg:svg')
         if svg_tag:
@@ -450,8 +525,20 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
     except Exception as e:
         return f"<div style='color:red;'>SVG Hatası: {str(e)}</div>"
 
+def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, district_seats_data=None, svg_file_name="turkiye.svg", show_badges=True):
+    seats_json = json.dumps({f"{k[0]}|{k[1]}": v for k, v in district_seats_data.items()}) if district_seats_data else None
+    return render_colored_svg_cached(
+        json.dumps(prov_winners),
+        json.dumps(dist_winners),
+        json.dumps(colors_dict),
+        json.dumps(tooltip_dict),
+        seats_json,
+        svg_file_name,
+        show_badges
+    )
+
 # ==========================================
-# 4. ARAYÜZ (UI) TASARIMI & SİDEBAR
+# 4. ARAYÜZ (UI) TASARIMI & YENİ SİDEBAR 
 # ==========================================
 st.title("AD Türkiye Genel Seçim Projeksiyonu")
 
@@ -461,7 +548,6 @@ custom_start_values = {
     'YENI': 38.3, 'A': 4.5, 'BBP': 0.9, 'SAADET': 1.1
 }
 
-# --- İTTİFAK VE ORTAK LİSTE HAFIZA YÖNETİMİ ---
 if 'alliance_list' not in st.session_state:
     st.session_state.alliance_list = [
         {"id": "aly_1", "name": "Cumhur İttifakı", "parties": [p for p in ['AKP', 'MHP', 'BBP'] if p in PARTIES]},
@@ -473,89 +559,114 @@ if 'joint_list' not in st.session_state:
     st.session_state.joint_list = []
     st.session_state.next_jl_id = 1
 
-# --- SİDEBAR FORM ---
-with st.sidebar.form("main_simulation_form"):
-    st.header("Ulusal Oy Oranları")
-    
-    user_inputs = {}
-    total_input = 0
-    for p in PARTIES:
-        varsayilan_oy = custom_start_values.get(p, float(base_national_dict.get(p, 0)))
-        val = st.number_input(f"{p} (%)", min_value=0.0, max_value=100.0, value=varsayilan_oy, step=0.1, key=f"inp_{p}")
-        user_inputs[p] = val
-        total_input += val
+st.sidebar.header("Ulusal Oy Oranları")
+user_inputs = {}
+for p in PARTIES:
+    varsayilan_oy = custom_start_values.get(p, float(base_national_dict.get(p, 0)))
+    val = st.sidebar.number_input(f"{p} (%)", min_value=0.0, max_value=100.0, value=varsayilan_oy, step=0.1, key=f"inp_{p}")
+    user_inputs[p] = val
 
-    st.divider()
-    st.subheader("Seçim Parametreleri")
-    threshold_input = st.number_input("Ülke Barajı (%)", min_value=0.0, max_value=15.0, value=7.0, step=0.5)
+st.sidebar.divider()
+st.sidebar.subheader("Seçim Parametreleri")
+threshold_input = st.sidebar.number_input("Ülke Barajı (%)", min_value=0.0, max_value=15.0, value=7.0, step=0.5)
 
-    st.divider()
-    st.subheader("İttifak Seçenekleri")
-    for aly in st.session_state.alliance_list:
-        new_name = st.text_input("İttifak Adı", value=aly['name'], key=f"name_{aly['id']}")
+st.sidebar.divider()
+st.sidebar.subheader("İttifak Seçenekleri")
+alliances_to_remove = []
+for aly in st.session_state.alliance_list:
+    col1, col2 = st.sidebar.columns([0.85, 0.15])
+    with col1:
+        new_name = st.sidebar.text_input("İttifak Adı", value=aly['name'], key=f"name_{aly['id']}", label_visibility="collapsed")
         aly['name'] = new_name
-        current_parties = [p for p in aly['parties'] if p in PARTIES]
-        new_parties = st.multiselect("Partiler", options=PARTIES, default=current_parties, key=f"parties_{aly['id']}")
-        aly['parties'] = new_parties
-        st.write("")
-
-    st.divider()
-    st.subheader("Ortak Liste Seçenekleri")
-    st.caption("Seçilen İLK parti çatı (logo) parti olur.")
-    for idx, jl in enumerate(st.session_state.joint_list):
-        list_title = f"{jl['parties'][0]} Listesi" if jl.get('parties') and len(jl['parties']) > 0 else f"Yeni Liste {idx + 1}"
-        selected_parties = st.multiselect(list_title, options=PARTIES, default=jl.get('parties', []), key=f"join_{jl['id']}")
-        jl['parties'] = selected_parties
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    submit_button = st.form_submit_button("🚀 SİMÜLASYONU ÇALIŞTIR", type="primary", use_container_width=True)
-
-# Yalnızca tek bir dinamik yönetim alanı
-with st.sidebar.expander("⚙️ İttifak / Liste Ekle & Çıkar", expanded=False):
-    c_btn1, c_btn2 = st.columns(2)
-    with c_btn1:
-        if st.button("➕ İttifak Ekle", use_container_width=True):
-            st.session_state.alliance_list.append({
-                "id": f"aly_{st.session_state.next_aly_id}",
-                "name": f"Yeni Blok {st.session_state.next_aly_id}",
-                "parties": []
-            })
-            st.session_state.next_aly_id += 1
-            st.rerun()
-    with c_btn2:
-        if st.button("➕ Liste Ekle", use_container_width=True):
-            st.session_state.joint_list.append({
-                "id": f"jl_{st.session_state.next_jl_id}",
-                "parties": []
-            })
-            st.session_state.next_jl_id += 1
-            st.rerun()
+    with col2:
+        if st.sidebar.button("🗑️", key=f"del_{aly['id']}", help="Bu ittifakı sil"):
+            alliances_to_remove.append(aly)
             
-    if len(st.session_state.alliance_list) > 0 and st.button("🗑️ Son İttifakı Sil", use_container_width=True):
-        st.session_state.alliance_list.pop()
-        st.rerun()
-        
-    if len(st.session_state.joint_list) > 0 and st.button("🗑️ Son Listeyi Sil", use_container_width=True):
-        st.session_state.joint_list.pop()
-        st.rerun()
+    current_parties = [p for p in aly['parties'] if p in PARTIES]
+    new_parties = st.sidebar.multiselect("Partiler", options=PARTIES, default=current_parties, key=f"parties_{aly['id']}", label_visibility="collapsed")
+    aly['parties'] = new_parties
+    st.sidebar.write("")
 
-# Simülasyon Verilerini Hazırla
+if alliances_to_remove:
+    for aly in alliances_to_remove:
+        st.session_state.alliance_list.remove(aly)
+    st.rerun()
+
+if st.sidebar.button("➕ Yeni İttifak Ekle", use_container_width=True):
+    st.session_state.alliance_list.append({"id": f"aly_{st.session_state.next_aly_id}", "name": f"Yeni Blok {st.session_state.next_aly_id}", "parties": []})
+    st.session_state.next_aly_id += 1
+    st.rerun()
+
+st.sidebar.divider()
+st.sidebar.subheader("Ortak Liste Seçenekleri")
+st.sidebar.caption("Seçilen İLK parti çatı (logo) parti olur.")
+jl_to_remove = []
+
+for idx, jl in enumerate(st.session_state.joint_list):
+    col1, col2 = st.sidebar.columns([0.85, 0.15])
+    with col1:
+        list_title = f"{jl['parties'][0]} Listesi" if jl.get('parties') and len(jl['parties']) > 0 else f"Yeni Liste {idx + 1}"
+        selected_parties = st.sidebar.multiselect(list_title, options=PARTIES, default=jl.get('parties', []), key=f"join_{jl['id']}")
+        jl['parties'] = selected_parties
+    with col2:
+        st.sidebar.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+        if st.sidebar.button("🗑️", key=f"del_jl_{jl['id']}", help="Sil"):
+            jl_to_remove.append(jl)
+
+if jl_to_remove:
+    for jl in jl_to_remove:
+        st.session_state.joint_list.remove(jl)
+    st.rerun()
+
+if st.sidebar.button("➕ Ortak Liste Ekle", use_container_width=True):
+    st.session_state.joint_list.append({"id": f"jl_{st.session_state.next_jl_id}", "parties": []})
+    st.session_state.next_jl_id += 1
+    st.rerun()
+
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
+
+if st.sidebar.button("🚀 SİMÜLASYONU ÇALIŞTIR", type="primary", use_container_width=True):
+    st.session_state.calc_params = {
+        "user_inputs": copy.deepcopy(user_inputs),
+        "threshold_input": threshold_input,
+        "alliance_list": copy.deepcopy(st.session_state.alliance_list),
+        "joint_list": copy.deepcopy(st.session_state.joint_list)
+    }
+
+if "calc_params" not in st.session_state:
+    st.session_state.calc_params = {
+        "user_inputs": copy.deepcopy(user_inputs),
+        "threshold_input": threshold_input,
+        "alliance_list": copy.deepcopy(st.session_state.alliance_list),
+        "joint_list": copy.deepcopy(st.session_state.joint_list)
+    }
+
+# ==========================================
+# 5. SİMÜLASYON HESAPLAMA (YALNIZCA ÇALIŞTIRILDIĞINDA VEYA İLK AÇILIŞTA)
+# ==========================================
+params = st.session_state.calc_params
+p_inputs = params["user_inputs"]
+p_threshold = params["threshold_input"]
+p_alliance_list = params["alliance_list"]
+p_joint_list = params["joint_list"]
+
+total_input = sum(p_inputs.values())
 if abs(total_input - 100.0) > 0.1:
-    st.sidebar.warning(f"Toplam oy %{total_input:.1f}. Oylar %100'e normalize ediliyor.")
+    st.sidebar.warning(f"Simülasyondaki toplam oy %{total_input:.1f}. Oylar %100'e normalize ediliyor.")
 
-user_inputs_norm = {p: (v / total_input) * 100 if total_input > 0 else 0 for p, v in user_inputs.items()}
+user_inputs_norm = {p: (v / total_input) * 100 if total_input > 0 else 0 for p, v in p_inputs.items()}
 
 alliances = {}
-for aly in st.session_state.alliance_list:
+for aly in p_alliance_list:
     if aly['name'].strip() and len(aly['parties']) > 0:
         alliances[aly['name']] = aly['parties']
 
 joint_lists = {}
-for jl in st.session_state.joint_list:
+for jl in p_joint_list:
     if len(jl['parties']) > 1:
         joint_lists[jl['parties'][0]] = jl['parties'][1:]
 
-df_results = run_simulation(df_base, base_national_dict, user_inputs_norm, alliances, joint_lists, threshold=threshold_input)
+df_results = run_simulation(df_base, base_national_dict, user_inputs_norm, alliances, joint_lists, threshold=p_threshold)
 
 display_user_nat = user_inputs_norm.copy()
 for umbrella, joiners in joint_lists.items():
@@ -564,19 +675,18 @@ for umbrella, joiners in joint_lists.items():
         display_user_nat[jp] = 0.0
 
 # --- DETAYLI ULUSAL ÖZET TABLOSU VE DEĞİŞİM (DELTA) GÖSTERGELERİ ---
-base_seats_2023 = {
-    'AKP': 268, 'CHP': 169, 'DEM': 61, 'MHP': 50, 'IYI': 43, 
-    'YRP': 5, 'TIP': 4, 'ZAFER': 0, 'YENI': 0, 'A': 0, 'BBP': 0, 'SAADET': 0
-}
+base_seats_2023 = {'AKP': 268, 'CHP': 169, 'DEM': 61, 'MHP': 50, 'IYI': 43, 'YRP': 5, 'TIP': 4, 'ZAFER': 0, 'YENI': 0, 'A': 0, 'BBP': 0, 'SAADET': 0}
+base_votes_2023 = {'AKP': 35.6, 'CHP': 25.3, 'MHP': 10.1, 'IYI': 9.7, 'DEM': 8.8, 'YRP': 2.8, 'ZAFER': 2.2, 'TIP': 1.8, 'BBP': 1.0, 'SAADET': 0.0, 'YENI': 0.0, 'A': 0.0}
 
-base_votes_2023 = {
-    'AKP': 35.6, 'CHP': 25.3, 'MHP': 10.1, 'IYI': 9.7, 
-    'DEM': 8.8, 'YRP': 2.8, 'ZAFER': 2.2, 'TIP': 1.8,
-    'BBP': 1.0, 'SAADET': 0.0, 'YENI': 0.0, 'A': 0.0
-}
+katilan_partiler = []
+for umbrella, joiners in joint_lists.items():
+    katilan_partiler.extend(joiners)
 
 summary_data = []
 for p in PARTIES:
+    if p in katilan_partiler:
+        continue 
+        
     seats = df_results[df_results['party'] == p]['seats_won'].sum()
     base_vote = base_votes_2023.get(p, 0.0)
     new_vote = display_user_nat.get(p, 0)
@@ -585,153 +695,145 @@ for p in PARTIES:
     seat_delta = seats - base_seat
 
     summary_data.append({
-        'Parti': p,
-        'Normalize Oy (%)': round(new_vote, 2),
-        'Oy Değişimi': round(vote_delta, 2),
-        'Vekil': int(seats),
-        'Vekil Değişimi': int(seat_delta)
+        'Parti': p, 'Normalize Oy (%)': round(new_vote, 2), 'Oy Değişimi': round(vote_delta, 2),
+        'Vekil': int(seats), 'Vekil Değişimi': int(seat_delta)
     })
 
 national_summary_df = pd.DataFrame(summary_data).sort_values(by=['Normalize Oy (%)', 'Vekil'], ascending=[False, False])
 
 st.subheader("TBMM Sandalye Dağılımı ve Oy Oranları")
-
-col1, col2 = st.columns([1.5, 1])
+col1, col2 = st.columns([1.2, 1])
 
 with col1:
-    max_vote_pct = national_summary_df['Normalize Oy (%)'].max()
-    if max_vote_pct == 0: max_vote_pct = 1.0
+    with st.container(border=True):
+        st.markdown("<h3 style='text-align: center; margin-top: 0;'>OY ORANLARI</h3>", unsafe_allow_html=True)
+        max_vote_pct = national_summary_df['Normalize Oy (%)'].max()
+        if max_vote_pct == 0: max_vote_pct = 1.0
 
-    html_blocks = [f"""
-    <style>
-    .custom-row {{ display: flex; align-items: center; margin-bottom: 8px; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; }}
-    .custom-party {{ width: 110px; text-align: right; padding-right: 12px; font-weight: 900; color: {c_text}; font-size: 16px; text-transform: uppercase; }}
-    .custom-seat {{ background-color: {t_seat_bg}; color: #ffffff !important; font-weight: bold; width: 60px; text-align: center; padding: 4px 0; margin-right: 10px; border: 2px solid {c_text}; box-shadow: 3px 3px 0px #eb252d; display: flex; flex-direction: column; justify-content: center; line-height: 1.1; }}
-    .seat-num {{ font-size: 16px; }}
-    .seat-delta {{ font-size: 10.5px; font-weight: 900; }}
-    .delta-pos {{ color: #00E676; }}
-    .delta-neg {{ color: #FF3D00; }}
-    .delta-neu {{ color: #9E9E9E; }}
-    .custom-bar-bg {{ flex-grow: 1; background-color: {t_bar_bg}; height: 42px; overflow: hidden; display: flex; border: 2px solid {c_text}; box-shadow: 3px 3px 0px #eb252d; }}
-    .custom-bar-fill {{ height: 100%; display: flex; align-items: center; padding-left: 8px; color: #ffffff !important; font-weight: 700; font-size: 14px; white-space: nowrap; border-right: 2px solid {c_text}; }}
-    .vote-delta {{ font-size: 11px; margin-left: 6px; font-weight: 400; opacity: 0.9; }}
-    </style>
-    <div style="max-width: 100%; margin: 10px 0 10px 0;">
-    """]
+        html_blocks = [f"""
+        <style>
+        .custom-row {{ display: flex; align-items: center; margin-bottom: 8px; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; }}
+        .custom-party {{ width: 110px; text-align: right; padding-right: 12px; font-weight: 900; color: {c_text}; font-size: 16px; text-transform: uppercase; }}
+        .custom-seat {{ background-color: {t_seat_bg}; color: #ffffff !important; font-weight: bold; width: 60px; text-align: center; padding: 4px 0; margin-right: 10px; border: 2px solid {c_text}; box-shadow: 3px 3px 0px #eb252d; display: flex; flex-direction: column; justify-content: center; line-height: 1.1; }}
+        .seat-num {{ font-size: 16px; }}
+        .seat-delta {{ font-size: 10.5px; font-weight: 900; }}
+        .delta-pos {{ color: #00E676; }}
+        .delta-neg {{ color: #FF3D00; }}
+        .delta-neu {{ color: #9E9E9E; }}
+        .custom-bar-bg {{ flex-grow: 1; background-color: {t_bar_bg}; height: 42px; overflow: hidden; display: flex; border: 2px solid {c_text}; box-shadow: 3px 3px 0px #eb252d; }}
+        .custom-bar-fill {{ height: 100%; display: flex; align-items: center; padding-left: 8px; color: #ffffff !important; font-weight: 700; font-size: 14px; white-space: nowrap; border-right: 2px solid {c_text}; }}
+        .vote-delta {{ font-size: 11px; margin-left: 6px; font-weight: 400; opacity: 0.9; }}
+        </style>
+        <div style="max-width: 100%; margin: 10px 0 10px 0;">
+        """]
 
-    for index, row in national_summary_df.iterrows():
-        party = row['Parti']
-        seats = int(row['Vekil'])
-        vote_pct = row['Normalize Oy (%)']
-        seat_delta = int(row['Vekil Değişimi'])
-        vote_delta = row['Oy Değişimi']
-        
-        color = party_colors.get(party, "#888888")
-        relative_width = (vote_pct / max_vote_pct) * 100
-        
-        if seat_delta > 0:
-            s_delta_html = f"<span class='seat-delta delta-pos'>▲ {seat_delta}</span>"
-        elif seat_delta < 0:
-            s_delta_html = f"<span class='seat-delta delta-neg'>▼ {abs(seat_delta)}</span>"
-        else:
-            s_delta_html = f"<span class='seat-delta delta-neu'>-</span>"
+        for index, row in national_summary_df.iterrows():
+            party = row['Parti']
+            seats = int(row['Vekil'])
+            vote_pct = row['Normalize Oy (%)']
+            seat_delta = int(row['Vekil Değişimi'])
+            vote_delta = row['Oy Değişimi']
             
-        if vote_delta > 0:
-            v_delta_str = f"(+{vote_delta:.1f})"
-        elif vote_delta < 0:
-            v_delta_str = f"({vote_delta:.1f})"
-        else:
-            v_delta_str = ""
+            color = party_colors.get(party, "#888888")
+            relative_width = (vote_pct / max_vote_pct) * 100
             
-        html_blocks.append(
-            f'<div class="custom-row">'
-            f'<div class="custom-party">{party}</div>'
-            f'<div class="custom-seat"><span class="seat-num">{seats}</span>{s_delta_html}</div>'
-            f'<div class="custom-bar-bg">'
-            f'<div class="custom-bar-fill" style="width: {relative_width}%; background-color: {color}; min-width: 90px;">'
-            f'%{vote_pct:.1f} <span class="vote-delta">{v_delta_str}</span>'
-            f'</div></div></div>'
-        )
-        
-    html_blocks.append("</div>")
-    st.markdown("".join(html_blocks), unsafe_allow_html=True)
+            if seat_delta > 0: s_delta_html = f"<span class='seat-delta delta-pos'>▲ {seat_delta}</span>"
+            elif seat_delta < 0: s_delta_html = f"<span class='seat-delta delta-neg'>▼ {abs(seat_delta)}</span>"
+            else: s_delta_html = f"<span class='seat-delta delta-neu'>-</span>"
+                
+            if vote_delta > 0: v_delta_str = f"(+{vote_delta:.1f})"
+            elif vote_delta < 0: v_delta_str = f"({vote_delta:.1f})"
+            else: v_delta_str = ""
+                
+            html_blocks.append(
+                f'<div class="custom-row">'
+                f'<div class="custom-party">{party}</div>'
+                f'<div class="custom-seat"><span class="seat-num">{seats}</span>{s_delta_html}</div>'
+                f'<div class="custom-bar-bg">'
+                f'<div class="custom-bar-fill" style="width: {relative_width}%; background-color: {color}; min-width: 90px;">'
+                f'%{vote_pct:.1f} <span class="vote-delta">{v_delta_str}</span>'
+                f'</div></div></div>'
+            )
+            
+        html_blocks.append("</div>")
+        st.markdown("".join(html_blocks), unsafe_allow_html=True)
 
 with col2:
-    df_plot = national_summary_df[national_summary_df['Vekil'] > 0].copy()
-    toplam_vekil = df_plot['Vekil'].sum()
+    with st.container(border=True):
+        st.markdown("<h3 style='text-align: center; margin-top: 0;'>MECLİS GRAFİĞİ</h3>", unsafe_allow_html=True)
+        df_plot = national_summary_df[national_summary_df['Vekil'] > 0].copy()
+        toplam_vekil = df_plot['Vekil'].sum()
 
-    istenen_sira = ['TIP', 'DEM', 'CHP', 'YENI', 'IYI', 'SAADET', 'ZAFER', 'A', 'AKP', 'MHP', 'BBP', 'YRP']
-    sirali_partiler = [p for p in istenen_sira if p in df_plot['Parti'].values]
-    for p in df_plot['Parti'].values:
-        if p not in sirali_partiler: sirali_partiler.append(p)
+        istenen_sira = ['TIP', 'DEM', 'CHP', 'YENI', 'IYI', 'SAADET', 'ZAFER', 'A', 'AKP', 'MHP', 'BBP', 'YRP']
+        sirali_partiler = [p for p in istenen_sira if p in df_plot['Parti'].values]
+        for p in df_plot['Parti'].values:
+            if p not in sirali_partiler: sirali_partiler.append(p)
 
-    ordered_values = [df_plot[df_plot['Parti'] == p]['Vekil'].values[0] for p in sirali_partiler]
-    ordered_colors = [party_colors.get(p, "#888888") for p in sirali_partiler]
+        ordered_values = [df_plot[df_plot['Parti'] == p]['Vekil'].values[0] for p in sirali_partiler]
+        ordered_colors = [party_colors.get(p, "#888888") for p in sirali_partiler]
 
-    labels = sirali_partiler + ["Gizli_Yari"]
-    values = ordered_values + [toplam_vekil]
-    colors = ordered_colors + ["rgba(0,0,0,0)"]
-    line_widths = [2] * len(sirali_partiler) + [0]
+        labels = sirali_partiler + ["Gizli_Yari"]
+        values = ordered_values + [toplam_vekil]
+        colors = ordered_colors + ["rgba(0,0,0,0)"]
+        line_widths = [2] * len(sirali_partiler) + [0]
 
-    fig = go.Figure(data=[go.Pie(
-        labels=labels, values=values, hole=0.55, rotation=-90, direction="clockwise", sort=False,
-        marker=dict(colors=colors, line=dict(color=c_bg, width=line_widths)),
-        textinfo='label+value', textposition='inside', insidetextorientation='horizontal', hoverinfo='none'
-    )])
+        fig = go.Figure(data=[go.Pie(
+            labels=labels, values=values, hole=0.55, rotation=-90, direction="clockwise", sort=False,
+            marker=dict(colors=colors, line=dict(color=c_bg, width=line_widths)),
+            textinfo='label+value', textposition='inside', insidetextorientation='horizontal', hoverinfo='none'
+        )])
 
-    fig.update_layout(
-        showlegend=False, margin=dict(t=0, b=0, l=0, r=0), height=320,
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        annotations=[dict(text=f"<b><span style='font-size:34px; color:{c_text}'>{toplam_vekil}</span></b>", x=0.5, y=0.5, yanchor='bottom', showarrow=False)]
-    )
-    fig.update_traces(texttemplate="%{label}<br>%{value}", selector=dict(type='pie'))
-    fig.data[0].texttemplate = [f"{l}<br>{v}" for l, v in zip(sirali_partiler, ordered_values)] + [""]
+        fig.update_layout(
+            showlegend=False, margin=dict(t=15, b=15, l=0, r=0), height=420,
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            annotations=[dict(text=f"<b><span style='font-size:34px; color:{c_text}'>{toplam_vekil}</span></b>", x=0.5, y=0.5, yanchor='bottom', showarrow=False)]
+        )
+        fig.update_traces(texttemplate="%{label}<br>%{value}", selector=dict(type='pie'))
+        fig.data[0].texttemplate = [f"{l}<br>{v}" for l, v in zip(sirali_partiler, ordered_values)] + [""]
 
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
-st.divider()
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 # --- MECLİS SVG HARİTA BÖLÜMÜ ---
 st.subheader("Genel Seçim İl Haritası")
-province_summary = df_results.groupby(['province', 'party'])['new_vote_pct'].mean().reset_index()
-first_parties_prov = province_summary.loc[province_summary.groupby('province')['new_vote_pct'].idxmax()]
-prov_winners_dict = {normalize_id(row['province']): row['party'] for _, row in first_parties_prov.iterrows()}
+with st.container(border=True):
+    province_summary = df_results.groupby(['province', 'party'])['new_vote_pct'].mean().reset_index()
+    first_parties_prov = province_summary.loc[province_summary.groupby('province')['new_vote_pct'].idxmax()]
+    prov_winners_dict = {normalize_id(row['province']): row['party'] for _, row in first_parties_prov.iterrows()}
 
-first_parties_dist = df_results.loc[df_results.groupby('district')['new_vote_pct'].idxmax()]
-dist_winners_dict = {normalize_id(row['district']): row['party'] for _, row in first_parties_dist.iterrows()}
+    first_parties_dist = df_results.loc[df_results.groupby('district')['new_vote_pct'].idxmax()]
+    dist_winners_dict = {normalize_id(row['district']): row['party'] for _, row in first_parties_dist.iterrows()}
 
-tooltip_dict = {}
-def create_tooltip_html(title_str, group_data):
-    sorted_g = group_data.sort_values(by='new_vote_pct', ascending=False).head(5)
-    html = f'<div class="tip-header">{title_str}</div>'
-    for _, r in sorted_g.iterrows():
-        pct = r['new_vote_pct']
-        if pct > 0.0:
-            party = r['party']
-            seats = int(r['seats_won'])
-            color = party_colors.get(party, '#888888')
-            html += f'''
-            <div class="tip-row">
-                <div class="tip-party">{party}</div>
-                <div class="tip-seat">{seats}</div>
-                <div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {pct}%; background-color: {color};"></div></div>
-                <div class="tip-pct">%{pct:.1f}</div>
-            </div>
-            '''
-    return html
+    tooltip_dict = {}
+    def create_tooltip_html(title_str, group_data):
+        sorted_g = group_data.sort_values(by='new_vote_pct', ascending=False).head(5)
+        html = f'<div class="tip-header">{title_str}</div>'
+        for _, r in sorted_g.iterrows():
+            pct = r['new_vote_pct']
+            if pct > 0.0:
+                party = r['party']
+                seats = int(r['seats_won'])
+                color = party_colors.get(party, '#888888')
+                html += f'''
+                <div class="tip-row">
+                    <div class="tip-party">{party}</div>
+                    <div class="tip-seat">{seats}</div>
+                    <div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {pct}%; background-color: {color};"></div></div>
+                    <div class="tip-pct">%{pct:.1f}</div>
+                </div>
+                '''
+        return html
 
-for dist, group in df_results.groupby('district'):
-    tooltip_dict[normalize_id(dist)] = create_tooltip_html(f"📌 {dist}", group)
+    for dist, group in df_results.groupby('district'):
+        tooltip_dict[normalize_id(dist)] = create_tooltip_html(f"📌 {dist}", group)
 
-for prov, group in df_results.groupby('province'):
-    prov_agg = group.groupby('party').agg({'new_vote_pct': 'mean', 'seats_won': 'sum'}).reset_index()
-    tooltip_dict[normalize_id(prov)] = create_tooltip_html(f"📌 {prov}", prov_agg)
+    for prov, group in df_results.groupby('province'):
+        prov_agg = group.groupby('party').agg({'new_vote_pct': 'mean', 'seats_won': 'sum'}).reset_index()
+        tooltip_dict[normalize_id(prov)] = create_tooltip_html(f"📌 {prov}", prov_agg)
 
-district_seats_data = df_results.groupby(['district', 'party'])['seats_won'].sum().to_dict()
-colored_svg_html = render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, district_seats_data, svg_file_name="turkiye.svg", show_badges=True)
+    district_seats_data = df_results.groupby(['district', 'party'])['seats_won'].sum().to_dict()
+    colored_svg_html = render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, district_seats_data, svg_file_name="turkiye.svg", show_badges=True)
 
-components.html(colored_svg_html, height=500, scrolling=False)
-st.divider()
+    components.html(colored_svg_html, height=500, scrolling=False)
 
 # --- TABLO BÖLÜMÜ (COLLAPSIBLE) ---
 with st.expander("📊 İl İl Dağılım Tablosu", expanded=False):
@@ -771,9 +873,10 @@ with st.expander("📊 İl İl Dağılım Tablosu", expanded=False):
 with st.expander("🎯 Fırsat ve Risk Analizi (Swing Modülü)", expanded=False):
     st.info("Bu modül, en az oy farkıyla kazanılan veya el değiştirmeye en yakın vekillikleri gösterir. Stratejik odaklanma için kritik bölgelerdir.")
 
+    aktif_partiler = national_summary_df['Parti'].tolist()
     target_party_swing = st.selectbox(
         "Hangi parti için fırsat / risk analizi yapılsın?", 
-        options=[p for p in PARTIES if national_summary_df[national_summary_df['Parti'] == p]['Vekil'].values[0] > 0 or display_user_nat.get(p, 0) > 1.0],
+        options=[p for p in aktif_partiler if national_summary_df[national_summary_df['Parti'] == p]['Vekil'].values[0] > 0 or display_user_nat.get(p, 0) > 1.0],
         index=0
     )
 
@@ -792,7 +895,7 @@ with st.expander("🎯 Fırsat ve Risk Analizi (Swing Modülü)", expanded=False
     for alliance_name, parties in temp_alliances_sw.items():
         alliance_national_votes_sw[alliance_name] = sum([display_user_nat.get(p, 0) for p in parties])
 
-    qualified_parties_sw = [p for aly, vote in alliance_national_votes_sw.items() if vote >= threshold_input for p in temp_alliances_sw[aly]]
+    qualified_parties_sw = [p for aly, vote in alliance_national_votes_sw.items() if vote >= p_threshold for p in temp_alliances_sw[aly]]
 
     for district, group in df_base.groupby('district'):
         seat_count = group['seat_count'].iloc[0]
@@ -864,82 +967,82 @@ with st.expander("🎯 Fırsat ve Risk Analizi (Swing Modülü)", expanded=False
             else:
                 st.write("Riskli bir bölge bulunamadı.")
 
+
 # ==========================================
-# 6. CUMHURBAŞKANLIĞI SEÇİMİ VE HARİTASI
+# 6. CUMHURBAŞKANLIĞI SEÇİMİ (VEKTÖR OPTİMİZASYONLU)
 # ==========================================
 st.divider()
 st.header("🗳️ Cumhurbaşkanlığı Seçimi Projeksiyonu")
-st.markdown("Adayları ve renklerini belirleyin, partilerin tabanlarından alacakları destek oranlarını girip simülasyonu başlatın.")
+st.markdown("Adayların tabanından alacakları destek yüzdelerini girin. **Adayın rengi, ona en çok oy getiren partinin rengine göre yapay zeka tarafından otomatik ayarlanır.**")
 
 cb_parties = [p for p in PARTIES if display_user_nat.get(p, 0) > 0.0]
 
-default_candidate_palette = ['#e63946', '#1d3557', '#2a9d8f', '#e76f51', '#f4a261', '#457b9d', '#9b5de5', '#00f5d4']
+def get_default_votes(overrides, valid_parties):
+    return {p: overrides.get(p, 0) for p in valid_parties}
 
-if 'candidate_colors_dict' not in st.session_state:
-    st.session_state.candidate_colors_dict = {
-        "Cumhur Adayı": "#FDA000",
-        "Muhalefet Adayı 1": "#A7050E",
-        "Muhalefet Adayı 2": "#20379f"
-    }
-
-if 'cb_df_1' not in st.session_state:
-    init_data = {"Aday Adı": ["Cumhur Adayı", "Muhalefet Adayı 1", "Muhalefet Adayı 2"]}
-    for p in cb_parties:
-        init_data[p] = [0.0, 0.0, 0.0]
-    st.session_state.cb_df_1 = pd.DataFrame(init_data)
+if 'cb_cands_1' not in st.session_state:
+    st.session_state.cb_cands_1 = [
+        {"name": "Erdoğan", "votes": get_default_votes({"AKP": 90, "IYI": 5, "DEM": 10, "MHP": 90, "YRP": 20, "A": 20, "BBP": 90, "SAADET": 20}, cb_parties)},
+        {"name": "İmamoğlu", "votes": get_default_votes({"IYI": 30, "DEM": 40, "TIP": 90, "ZAFER": 20, "YENI": 100, "SAADET": 10}, cb_parties)},
+        {"name": "Bakırhan", "votes": get_default_votes({"DEM": 50, "TIP": 10}, cb_parties)},
+        {"name": "Ağıralioğlu", "votes": get_default_votes({"AKP": 5, "IYI": 10, "MHP": 10, "A": 80, "BBP": 10}, cb_parties)},
+        {"name": "Erbakan", "votes": get_default_votes({"AKP": 5, "YRP": 80, "SAADET": 80}, cb_parties)},
+        {"name": "Dervişoğlu", "votes": get_default_votes({"IYI": 85}, cb_parties)},
+        {"name": "Özdağ", "votes": get_default_votes({"ZAFER": 80}, cb_parties)},
+        {"name": "Kılıçdaroğlu", "votes": get_default_votes({"CHP": 100}, cb_parties)}
+    ]
 
 st.subheader("1. Tur Senaryosu")
-cb_edited_1 = st.data_editor(
-    st.session_state.cb_df_1, 
-    num_rows="dynamic",
-    use_container_width=True, 
-    hide_index=True,
-    key="editor_tour1"
-)
 
-# Aday Renk Seçimi Bölümü
-with st.expander("🎨 Aday Renklerini Özelleştir", expanded=False):
-    cols_color = st.columns(4)
-    c_idx = 0
-    for ad in cb_edited_1["Aday Adı"]:
-        ad_str = str(ad).strip()
-        if ad_str and pd.notna(ad):
-            default_c = st.session_state.candidate_colors_dict.get(ad_str, default_candidate_palette[c_idx % len(default_candidate_palette)])
-            with cols_color[c_idx % 4]:
-                new_c = st.color_picker(f"{ad_str}", value=default_c, key=f"cp_{ad_str}")
-                st.session_state.candidate_colors_dict[ad_str] = new_c
-            c_idx += 1
+with st.container(border=True):
+    col_baslik = st.columns([2.5] + [1]*len(cb_parties))
+    col_baslik[0].markdown("<div style='font-weight:900; color:#888; font-size:14px; margin-top:10px;'>ADAY ADI</div>", unsafe_allow_html=True)
+    
+    for i, p in enumerate(cb_parties):
+        c = party_colors.get(p, c_text)
+        col_baslik[i+1].markdown(f"<div style='text-align:center; font-weight:900; color:{c}; font-size:15px; margin-top:10px;'>{p}</div>", unsafe_allow_html=True)
+    
+    st.markdown("<hr style='margin: 10px 0; border-width: 2px;'>", unsafe_allow_html=True)
+    
+    for idx, cand in enumerate(st.session_state.cb_cands_1):
+        r_cols = st.columns([2.5] + [1]*len(cb_parties))
+        cand["name"] = r_cols[0].text_input(f"Aday {idx}", value=cand["name"], label_visibility="collapsed", key=f"c1_n_{idx}")
+        for i, p in enumerate(cb_parties):
+            cand["votes"][p] = r_cols[i+1].number_input(f"{p}_{idx}", value=cand["votes"].get(p, 0), min_value=0, max_value=100, label_visibility="collapsed", key=f"c1_v_{idx}_{p}")
 
-def calculate_cb_district_results(cb_df, df_results_data, colors_override):
-    cb_dist_records = []
+if st.button("➕ YENİ ADAY EKLE", key="add_cand_1"):
+    st.session_state.cb_cands_1.append({"name": f"Aday {len(st.session_state.cb_cands_1)+1}", "votes": {p: 0 for p in cb_parties}})
+    st.rerun()
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# İŞLEM VE HARİTA FONKSİYONU (MATRİS ÇARPIMI İLE HIZLANDIRILDI)
+@st.cache_data(show_spinner=False)
+def calculate_cb_district_results_cached(cands_list_json, df_results_data_json, colors_override_json, cb_parties_json):
+    cands_list = json.loads(cands_list_json)
+    df_results_data = pd.read_json(df_results_data_json, orient='records')
+    colors_override = json.loads(colors_override_json)
+    cb_parties_list = json.loads(cb_parties_json)
+
     pivot_dist_votes = df_results_data.pivot(index='district', columns='party', values='new_vote_pct').fillna(0)
     
-    for district, row_party in pivot_dist_votes.iterrows():
-        cand_votes_dist = {}
-        for _, c_row in cb_df.iterrows():
-            aday = str(c_row["Aday Adı"]).strip()
-            if not aday: continue
+    # VEKTÖR MATRİS OLUŞTURMA (Satırlar: Adaylar, Sütunlar: Partiler)
+    weight_dict = {}
+    for cand in cands_list:
+        aday = str(cand["name"]).strip()
+        if aday:
+            weight_dict[aday] = {p: float(cand["votes"].get(p, 0)) / 100.0 for p in cb_parties_list}
             
-            c_vote = 0.0
-            for p in cb_parties:
-                if p in c_row and not pd.isna(c_row[p]):
-                    p_vote = row_party.get(p, 0.0)
-                    share = float(c_row[p]) / 100.0
-                    c_vote += p_vote * share
-            cand_votes_dist[aday] = c_vote
-            
-        tot_c = sum(cand_votes_dist.values())
-        norm_c = {ad: (v / tot_c) * 100 if tot_c > 0 else 0 for ad, v in cand_votes_dist.items()}
-        
-        for ad, pct in norm_c.items():
-            cb_dist_records.append({
-                'district': district,
-                'province': district.split('-')[0],
-                'candidate': ad,
-                'pct': pct
-            })
-            
-    df_cb_dist = pd.DataFrame(cb_dist_records)
+    weight_df = pd.DataFrame(weight_dict).fillna(0)
+    common_parties = [p for p in cb_parties_list if p in pivot_dist_votes.columns]
+    
+    # DEVASA HIZ ARTIŞI: Pandas Nokta Çarpımı (İlçe Oyları x Aday Ağırlıkları)
+    cand_votes_dist = pivot_dist_votes[common_parties].dot(weight_df.loc[common_parties])
+    cand_votes_dist_norm = cand_votes_dist.div(cand_votes_dist.sum(axis=1), axis=0).fillna(0) * 100
+    
+    df_cb_dist = cand_votes_dist_norm.reset_index().melt(id_vars='district', var_name='candidate', value_name='pct')
+    df_cb_dist['province'] = df_cb_dist['district'].apply(lambda x: x.split('-')[0])
+    
     prov_summary = df_cb_dist.groupby(['province', 'candidate'])['pct'].mean().reset_index()
     first_prov = prov_summary.loc[prov_summary.groupby('province')['pct'].idxmax()]
     cb_prov_winners = {normalize_id(r['province']): r['candidate'] for _, r in first_prov.iterrows()}
@@ -953,13 +1056,7 @@ def calculate_cb_district_results(cb_df, df_results_data, colors_override):
         html = f'<div class="tip-header">📌 {d_name} (CB Seçimi)</div>'
         for _, r in sorted_g.iterrows():
             col_ad = colors_override.get(r['candidate'], '#888')
-            html += f'''
-            <div class="tip-row">
-                <div class="tip-party" style="width:100px;">{r['candidate']}</div>
-                <div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {r['pct']}%; background-color: {col_ad};"></div></div>
-                <div class="tip-pct">%{r['pct']:.1f}</div>
-            </div>
-            '''
+            html += f'<div class="tip-row"><div class="tip-party" style="width:100px;">{r["candidate"]}</div><div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {r["pct"]}%; background-color: {col_ad};"></div></div><div class="tip-pct">%{r["pct"]:.1f}</div></div>'
         cb_tooltips[normalize_id(d_name)] = html
 
     for p_name, grp in df_cb_dist.groupby('province'):
@@ -967,127 +1064,169 @@ def calculate_cb_district_results(cb_df, df_results_data, colors_override):
         html = f'<div class="tip-header">📌 {p_name} (CB Seçimi)</div>'
         for _, r in prov_agg.iterrows():
             col_ad = colors_override.get(r['candidate'], '#888')
-            html += f'''
-            <div class="tip-row">
-                <div class="tip-party" style="width:100px;">{r['candidate']}</div>
-                <div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {r['pct']}%; background-color: {col_ad};"></div></div>
-                <div class="tip-pct">%{r['pct']:.1f}</div>
-            </div>
-            '''
+            html += f'<div class="tip-row"><div class="tip-party" style="width:100px;">{r["candidate"]}</div><div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {r["pct"]}%; background-color: {col_ad};"></div></div><div class="tip-pct">%{r["pct"]:.1f}</div></div>'
         cb_tooltips[normalize_id(p_name)] = html
         
     return cb_prov_winners, cb_dist_winners, colors_override, cb_tooltips
 
-# 1. TUR HESAPLAMA BUTONU
+def calculate_cb_district_results(cands_list, df_results_data, cand_color_map, cb_parties_list):
+    return calculate_cb_district_results_cached(
+        json.dumps(cands_list),
+        df_results_data.to_json(orient='records'),
+        json.dumps(cand_color_map),
+        json.dumps(cb_parties_list)
+    )
+
 cb_calc_button_1 = st.button("🗳️ 1. Tur Sonuçlarını & Haritasını Hesapla", type="primary", use_container_width=True)
 
 if cb_calc_button_1 or ('cb_res_1_saved' in st.session_state):
     st.session_state.cb_res_1_saved = True
     
     cb_res_1 = {}
-    for idx, row in cb_edited_1.iterrows():
-        aday = row["Aday Adı"]
-        if pd.isna(aday) or str(aday).strip() == "": continue
-        votes = sum([display_user_nat.get(p, 0) * (float(row.get(p, 0)) / 100.0) for p in cb_parties if p in row and not pd.isna(row[p])])
-        cb_res_1[str(aday).strip()] = votes
+    cand_color_map_1 = {}
+    
+    for cand in st.session_state.cb_cands_1:
+        aday = str(cand["name"]).strip()
+        if not aday: continue
+        
+        votes = 0.0
+        max_v = -1
+        max_p = None
+        
+        for p in cb_parties:
+            v = cand["votes"].get(p, 0)
+            contrib = display_user_nat.get(p, 0) * (v / 100.0)
+            votes += contrib
+            
+            if contrib > max_v:
+                max_v = contrib
+                max_p = p
+                
+        cb_res_1[aday] = votes
+        cand_color_map_1[aday] = party_colors.get(max_p, "#888888") if max_p else "#888888"
 
     total_cb_1 = sum(cb_res_1.values())
 
     if total_cb_1 > 0:
         st.markdown("### 📊 1. Tur Sonuçları")
-        sorted_1 = sorted(cb_res_1.items(), key=lambda x: x[1], reverse=True)
-        max_cb_pct1 = (sorted_1[0][1] / total_cb_1) * 100 if total_cb_1 > 0 else 1.0
-        
-        col_cb_bars, col_cb_map = st.columns([1.1, 1.3])
-        
-        with col_cb_bars:
-            st.markdown("<div class='cb-card'>", unsafe_allow_html=True)
-            for aday, votes in sorted_1:
-                pct = (votes / total_cb_1) * 100
-                cand_color = st.session_state.candidate_colors_dict.get(aday, "#457b9d")
-                bar_width = (pct / max_cb_pct1) * 100
-                st.markdown(f"""
-                <div class='cb-row'>
-                    <div class='cb-name'>{aday}</div>
-                    <div class='cb-bar-bg'>
-                        <div class='cb-bar-fill' style='width: {bar_width}%; background-color: {cand_color}; min-width: 60px;'>%{pct:.2f}</div>
+        with st.container(border=True):
+            sorted_1 = sorted(cb_res_1.items(), key=lambda x: x[1], reverse=True)
+            max_cb_pct1 = (sorted_1[0][1] / total_cb_1) * 100 if total_cb_1 > 0 else 1.0
+            
+            col_cb_bars, col_cb_map = st.columns([1.1, 1.3])
+            
+            with col_cb_bars:
+                st.markdown("<div class='cb-card'>", unsafe_allow_html=True)
+                for aday, votes in sorted_1:
+                    pct = (votes / total_cb_1) * 100
+                    cand_color = cand_color_map_1.get(aday, "#888888")
+                    bar_width = (pct / max_cb_pct1) * 100
+                    st.markdown(f"""
+                    <div class='cb-row'>
+                        <div class='cb-name'>{aday}</div>
+                        <div class='cb-bar-bg'>
+                            <div class='cb-bar-fill' style='width: {bar_width}%; background-color: {cand_color}; min-width: 60px;'>%{pct:.2f}</div>
+                        </div>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-                
-            kazanan_orani = (sorted_1[0][1] / total_cb_1) * 100
-            if kazanan_orani > 50.0:
-                st.success(f"🎉 Seçim 1. Turda Bitti! **{sorted_1[0][0]}** %{kazanan_orani:.2f} ile Cumhurbaşkanı seçildi.")
-            else:
-                st.warning(f"⚖️ Hiçbir aday %50+1'e ulaşamadı. **{sorted_1[0][0]}** ve **{sorted_1[1][0]}** 2. tura kaldı.")
-        
-        with col_cb_map:
-            st.markdown("#### 1. Tur Harita Dağılımı")
-            p_win1, d_win1, c_cols1, t_tips1 = calculate_cb_district_results(cb_edited_1, df_results, st.session_state.candidate_colors_dict)
-            svg_cb_html_1 = render_colored_svg(p_win1, d_win1, c_cols1, t_tips1, svg_file_name="turkiye.svg", show_badges=False)
-            components.html(svg_cb_html_1, height=450, scrolling=False)
+                    """, unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+                    
+                kazanan_orani = (sorted_1[0][1] / total_cb_1) * 100
+                if kazanan_orani > 50.0:
+                    st.success(f"🎉 Seçim 1. Turda Bitti! **{sorted_1[0][0]}** %{kazanan_orani:.2f} ile Cumhurbaşkanı seçildi.")
+                else:
+                    st.warning(f"⚖️ Hiçbir aday %50+1'e ulaşamadı. **{sorted_1[0][0]}** ve **{sorted_1[1][0]}** 2. tura kaldı.")
+            
+            with col_cb_map:
+                st.markdown("#### 1. Tur Harita Dağılımı")
+                p_win1, d_win1, c_cols1, t_tips1 = calculate_cb_district_results(st.session_state.cb_cands_1, df_results, cand_color_map_1, cb_parties)
+                svg_cb_html_1 = render_colored_svg(p_win1, d_win1, c_cols1, t_tips1, svg_file_name="turkiye.svg", show_badges=False)
+                components.html(svg_cb_html_1, height=450, scrolling=False)
 
-        # --- 2. TUR SENARYOSU ---
         if kazanan_orani <= 50.0 and len(sorted_1) > 1:
             st.divider()
             top1, top2 = sorted_1[0][0], sorted_1[1][0]
             st.subheader(f"2. Tur Senaryosu ({top1} vs {top2})")
             
-            if 'cb_df_2' not in st.session_state or list(st.session_state.cb_df_2["Aday Adı"]) != [top1, top2]:
-                init_data_2 = {"Aday Adı": [top1, top2]}
-                for p in cb_parties:
-                    val1 = cb_edited_1.loc[cb_edited_1['Aday Adı'] == top1, p].values
-                    val2 = cb_edited_1.loc[cb_edited_1['Aday Adı'] == top2, p].values
-                    init_data_2[p] = [val1[0] if len(val1)>0 else 0.0, val2[0] if len(val2)>0 else 0.0]
-                st.session_state.cb_df_2 = pd.DataFrame(init_data_2)
-                
-            cb_edited_2 = st.data_editor(
-                st.session_state.cb_df_2, 
-                num_rows="fixed",
-                use_container_width=True, 
-                hide_index=True,
-                key="editor_tour2"
-            )
+            if 'cb_cands_2' not in st.session_state or len(st.session_state.cb_cands_2) < 2 or st.session_state.cb_cands_2[0]["name"] != top1 or st.session_state.cb_cands_2[1]["name"] != top2:
+                v1 = next((c["votes"] for c in st.session_state.cb_cands_1 if c["name"] == top1), {p: 0 for p in cb_parties})
+                v2 = next((c["votes"] for c in st.session_state.cb_cands_1 if c["name"] == top2), {p: 0 for p in cb_parties})
+                st.session_state.cb_cands_2 = [
+                    {"name": top1, "votes": copy.deepcopy(v1)},
+                    {"name": top2, "votes": copy.deepcopy(v2)}
+                ]
             
+            with st.container(border=True):
+                col_baslik2 = st.columns([2.5] + [1]*len(cb_parties))
+                col_baslik2[0].markdown("<div style='font-weight:900; color:#888; font-size:14px; margin-top:10px;'>ADAY ADI</div>", unsafe_allow_html=True)
+                for i, p in enumerate(cb_parties):
+                    c = party_colors.get(p, c_text)
+                    col_baslik2[i+1].markdown(f"<div style='text-align:center; font-weight:900; color:{c}; font-size:15px; margin-top:10px;'>{p}</div>", unsafe_allow_html=True)
+                
+                st.markdown("<hr style='margin: 10px 0; border-width: 2px;'>", unsafe_allow_html=True)
+                
+                for idx, cand in enumerate(st.session_state.cb_cands_2):
+                    r_cols = st.columns([2.5] + [1]*len(cb_parties))
+                    r_cols[0].markdown(f"**{cand['name']}**")
+                    for i, p in enumerate(cb_parties):
+                        cand["votes"][p] = r_cols[i+1].number_input(f"{p}_{idx}_2", value=cand["votes"].get(p, 0), min_value=0, max_value=100, label_visibility="collapsed", key=f"c2_v_{idx}_{p}")
+
             cb_calc_button_2 = st.button("🏆 2. Tur Sonuçlarını & Haritasını Hesapla", type="primary", use_container_width=True)
             
             if cb_calc_button_2 or ('cb_res_2_saved' in st.session_state):
                 st.session_state.cb_res_2_saved = True
                 cb_res_2 = {}
-                for idx, row in cb_edited_2.iterrows():
-                    aday = str(row["Aday Adı"]).strip()
-                    votes = sum([display_user_nat.get(p, 0) * (float(row.get(p, 0)) / 100.0) for p in cb_parties if p in row and not pd.isna(row[p])])
+                cand_color_map_2 = {}
+                
+                for cand in st.session_state.cb_cands_2:
+                    aday = str(cand["name"]).strip()
+                    if not aday: continue
+                    
+                    votes = 0.0
+                    max_v = -1
+                    max_p = None
+                    
+                    for p in cb_parties:
+                        v = cand["votes"].get(p, 0)
+                        contrib = display_user_nat.get(p, 0) * (v / 100.0)
+                        votes += contrib
+                        
+                        if contrib > max_v:
+                            max_v = contrib
+                            max_p = p
+                            
                     cb_res_2[aday] = votes
+                    cand_color_map_2[aday] = party_colors.get(max_p, "#888888") if max_p else "#888888"
                     
                 total_cb_2 = sum(cb_res_2.values())
                 
                 if total_cb_2 > 0:
                     st.markdown("### 🏆 2. Tur Kesin Sonuçları")
-                    sorted_2 = sorted(cb_res_2.items(), key=lambda x: x[1], reverse=True)
-                    max_cb_pct2 = (sorted_2[0][1] / total_cb_2) * 100 if total_cb_2 > 0 else 1.0
-                    
-                    col_cb2_bars, col_cb2_map = st.columns([1.1, 1.3])
-                    
-                    with col_cb2_bars:
-                        st.markdown("<div class='cb-card'>", unsafe_allow_html=True)
-                        for aday, votes in sorted_2:
-                            pct = (votes / total_cb_2) * 100
-                            cand_color = st.session_state.candidate_colors_dict.get(aday, "#2a9d8f")
-                            bar_width = (pct / max_cb_pct2) * 100
-                            st.markdown(f"""
-                            <div class='cb-row'>
-                                <div class='cb-name'>{aday}</div>
-                                <div class='cb-bar-bg'>
-                                    <div class='cb-bar-fill' style='width: {bar_width}%; background-color: {cand_color}; min-width: 60px;'>%{pct:.2f}</div>
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                        st.markdown("</div>", unsafe_allow_html=True)
-                        st.success(f"🇹🇷 Türkiye'nin 13. Cumhurbaşkanı: **{sorted_2[0][0]}** (%{ (sorted_2[0][1]/total_cb_2)*100:.2f})")
+                    with st.container(border=True):
+                        sorted_2 = sorted(cb_res_2.items(), key=lambda x: x[1], reverse=True)
+                        max_cb_pct2 = (sorted_2[0][1] / total_cb_2) * 100 if total_cb_2 > 0 else 1.0
                         
-                    with col_cb2_map:
-                        st.markdown("#### 2. Tur Harita Dağılımı")
-                        p_win2, d_win2, c_cols2, t_tips2 = calculate_cb_district_results(cb_edited_2, df_results, st.session_state.candidate_colors_dict)
-                        svg_cb_html_2 = render_colored_svg(p_win2, d_win2, c_cols2, t_tips2, svg_file_name="turkiye.svg", show_badges=False)
-                        components.html(svg_cb_html_2, height=450, scrolling=False)
+                        col_cb2_bars, col_cb2_map = st.columns([1.1, 1.3])
+                        
+                        with col_cb2_bars:
+                            st.markdown("<div class='cb-card'>", unsafe_allow_html=True)
+                            for aday, votes in sorted_2:
+                                pct = (votes / total_cb_2) * 100
+                                cand_color = cand_color_map_2.get(aday, "#888888")
+                                bar_width = (pct / max_cb_pct2) * 100
+                                st.markdown(f"""
+                                <div class='cb-row'>
+                                    <div class='cb-name'>{aday}</div>
+                                    <div class='cb-bar-bg'>
+                                        <div class='cb-bar-fill' style='width: {bar_width}%; background-color: {cand_color}; min-width: 60px;'>%{pct:.2f}</div>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            st.markdown("</div>", unsafe_allow_html=True)
+                            st.success(f"🇹🇷 Türkiye'nin 13. Cumhurbaşkanı: **{sorted_2[0][0]}** (%{ (sorted_2[0][1]/total_cb_2)*100:.2f})")
+                            
+                        with col_cb2_map:
+                            st.markdown("#### 2. Tur Harita Dağılımı")
+                            p_win2, d_win2, c_cols2, t_tips2 = calculate_cb_district_results(st.session_state.cb_cands_2, df_results, cand_color_map_2, cb_parties)
+                            svg_cb_html_2 = render_colored_svg(p_win2, d_win2, c_cols2, t_tips2, svg_file_name="turkiye.svg", show_badges=False)
+                            components.html(svg_cb_html_2, height=450, scrolling=False)
