@@ -71,14 +71,12 @@ custom_theme_css = f"""
         color: {c_text} !important;
     }}
 
-    /* SİDEBAR VE GİRDİLER */
     section[data-testid="stSidebar"] {{
         background-color: {c_bg} !important;
         border-right: 3px solid {c_text} !important;
         transition: background-color 0.3s;
     }}
     
-    /* 🟥 TÜM GİRDİ VE SEÇİM KUTULARINDA KESKİN KÖŞELER (0px) 🟥 */
     div[data-baseweb="input"],
     div[data-baseweb="base-input"],
     div[data-baseweb="select"],
@@ -118,7 +116,6 @@ custom_theme_css = f"""
         margin-bottom: 1.5rem !important;
     }}
     
-    /* 🟥 NEOBRUTALİST KONTEYNER VE KUTULAR 🟥 */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         border: 3px solid {c_text} !important;
         box-shadow: 6px 6px 0px #eb252d !important;
@@ -152,7 +149,6 @@ custom_theme_css = f"""
         text-transform: uppercase !important;
     }}
 
-    /* TABLOLAR VE BUTONLAR */
     [data-testid="stDataFrame"] {{
         border-radius: 0px !important;
         border: 3px solid {c_text} !important;
@@ -175,7 +171,6 @@ custom_theme_css = f"""
         box-shadow: 2px 2px 0px #eb252d !important;
     }}
 
-    /* CB KARTLARI */
     .cb-card {{
         background-color: {c_bg};
         border: 3px solid {c_text};
@@ -227,7 +222,6 @@ custom_theme_css = f"""
         background-color: transparent !important;
     }}
 
-    /* Mobil Cihazlar İçin Otomatik Sütun Düzenlemesi (Ekran < 768px) */
     @media (max-width: 768px) {{
         [data-testid="stHorizontalBlock"] {{
             flex-direction: column !important;
@@ -239,13 +233,11 @@ custom_theme_css = f"""
         }}
     }}
 
-    /* Mobil ekranlarda yatay taşmaları kaydırma çubuğuna bağla */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         max-width: 100% !important;
         overflow-x: auto !important;
     }}
     
-    /* NEOBRUTALİST SEKMELER (TABS) - BÜYÜK FONT */
     [data-testid="stTabs"] [data-baseweb="tab-list"] {{
         display: flex;
         width: 100%;
@@ -447,7 +439,7 @@ def run_simulation(base_df, base_nat, user_nat, alliances, joint_lists, threshol
     )
 
 # ==========================================
-# 3. SVG HARİTA MOTORU (TAM ÖNBELLEKLİ - V2)
+# 3. SVG HARİTA MOTORU (ISI HARİTASI DESTEKLİ)
 # ==========================================
 @st.cache_data(show_spinner=False)
 def load_raw_svg(svg_file_name="turkiye.svg"):
@@ -456,12 +448,27 @@ def load_raw_svg(svg_file_name="turkiye.svg"):
     with open(svg_file_path, 'r', encoding='utf-8') as f:
         return f.read()
 
+def hex_to_rgb(hex_str):
+    hex_str = hex_str.lstrip('#')
+    return tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
+
+def get_heatmap_color(base_hex, ratio):
+    # ratio 0.0 (az oy) ile 1.0 (çok oy) arasında
+    # Az oy alırken beyaza/açık tona (240, 240, 240), çok alırken partinin kendi rengine gider
+    ratio = max(0.05, min(1.0, ratio))
+    rgb = hex_to_rgb(base_hex)
+    
+    # Beyaz/açık zemin için baz renk ile beyaz (255, 255, 255) arasında harmanlama
+    new_rgb = tuple(int(c * ratio + 245 * (1 - ratio)) for c in rgb)
+    return f"#{new_rgb[0]:02x}{new_rgb[1]:02x}{new_rgb[2]:02x}"
+
 @st.cache_data(show_spinner=False)
-def render_colored_svg_cached(prov_winners_json, dist_winners_json, colors_dict_json, tooltip_dict_json, district_seats_data_json, svg_file_name, show_badges):
+def render_colored_svg_cached(prov_winners_json, dist_winners_json, colors_dict_json, tooltip_dict_json, district_seats_data_json, svg_file_name, show_badges, custom_colors_json=None):
     prov_winners = json.loads(prov_winners_json)
     dist_winners = json.loads(dist_winners_json)
     colors_dict = json.loads(colors_dict_json)
     tooltip_dict = json.loads(tooltip_dict_json)
+    custom_colors = json.loads(custom_colors_json) if custom_colors_json else {}
     
     district_seats_data = None
     if district_seats_data_json:
@@ -499,7 +506,11 @@ def render_colored_svg_cached(prov_winners_json, dist_winners_json, colors_dict_
                 
             winner = dist_winners.get(svg_id_norm) or prov_winners.get(svg_id_norm)
             if winner:
-                color = colors_dict.get(winner, "#CCCCCC")
+                if svg_id_norm in custom_colors:
+                    color = custom_colors[svg_id_norm]
+                else:
+                    color = colors_dict.get(winner, "#CCCCCC")
+                    
                 if 'style' in path.attrs:
                     style_str = path['style']
                     style_dict = {item.split(':')[0].strip(): item.split(':')[1].strip() for item in style_str.split(';') if ':' in item}
@@ -573,8 +584,9 @@ def render_colored_svg_cached(prov_winners_json, dist_winners_json, colors_dict_
     except Exception as e:
         return f"<div style='color:red;'>SVG Hatası: {str(e)}</div>"
 
-def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, district_seats_data=None, svg_file_name="turkiye.svg", show_badges=True):
+def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, district_seats_data=None, svg_file_name="turkiye.svg", show_badges=True, custom_colors=None):
     seats_json = json.dumps({f"{k[0]}|{k[1]}": v for k, v in district_seats_data.items()}) if district_seats_data else None
+    custom_json = json.dumps(custom_colors) if custom_colors else None
     return render_colored_svg_cached(
         json.dumps(prov_winners),
         json.dumps(dist_winners),
@@ -582,7 +594,8 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
         json.dumps(tooltip_dict),
         seats_json,
         svg_file_name,
-        show_badges
+        show_badges,
+        custom_json
     )
 
 # ==========================================
@@ -912,30 +925,99 @@ with tab_meclis:
             }
         )
 
-    # --- GENEL SEÇİM İL HARİTASI ---
+    # --- GENEL SEÇİM İL HARİTASI VE ISI HARİTASI (HEATMAP) MANTIĞI ---
     st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("Genel Seçim İl Haritası")
+    
+    col_m_title, col_m_filter = st.columns([1.5, 1])
+    with col_m_title:
+        st.subheader("Genel Seçim İl Haritası")
+    with col_m_filter:
+        map_mode = st.selectbox(
+            "Harita Görünüm Modu:",
+            options=["1. Partiler (Varsayılan)"] + [p for p in PARTIES],
+            key="map_display_mode"
+        )
 
-    province_summary = df_results.groupby(['province', 'party'])['new_vote_pct'].mean().reset_index()
-    first_parties_prov = province_summary.loc[province_summary.groupby('province')['new_vote_pct'].idxmax()]
-    prov_winners_dict = {normalize_id(row['province']): row['party'] for _, row in first_parties_prov.iterrows()}
+    prov_winners_dict = {}
+    dist_winners_dict = {}
+    custom_heatmap_colors = {}
+    show_badges_flag = True
 
-    first_parties_dist = df_results.loc[df_results.groupby('district')['new_vote_pct'].idxmax()]
-    dist_winners_dict = {normalize_id(row['district']): row['party'] for _, row in first_parties_dist.iterrows()}
+    if map_mode == "1. Partiler (Varsayılan)":
+        province_summary = df_results.groupby(['province', 'party'])['new_vote_pct'].mean().reset_index()
+        first_parties_prov = province_summary.loc[province_summary.groupby('province')['new_vote_pct'].idxmax()]
+        prov_winners_dict = {normalize_id(row['province']): row['party'] for _, row in first_parties_prov.iterrows()}
+
+        first_parties_dist = df_results.loc[df_results.groupby('district')['new_vote_pct'].idxmax()]
+        dist_winners_dict = {normalize_id(row['district']): row['party'] for _, row in first_parties_dist.iterrows()}
+        show_badges_flag = True
+    else:
+        selected_party = map_mode.split(" ")[0]
+        base_hex = party_colors.get(selected_party, "#3485fd")
+        show_badges_flag = False
+        
+        # İl/İlçe bazlı oyları alıp normalize edelim
+        prov_votes_map = df_results[df_results['party'] == selected_party].groupby('province')['new_vote_pct'].mean().to_dict()
+        dist_votes_map = df_results[df_results['party'] == selected_party].set_index('district')['new_vote_pct'].to_dict()
+        
+        all_vals = list(prov_votes_map.values()) + list(dist_votes_map.values())
+        max_v = max(all_vals) if all_vals else 100.0
+        min_v = min(all_vals) if all_vals else 0.0
+        v_range = (max_v - min_v) if (max_v - min_v) > 0 else 1.0
+
+        # Büyükşehir (Istanbul, Ankara, Izmir, Bursa) eşleştirmeleri için ana iller
+        metro_provinces = ['istanbul', 'ankara', 'izmir', 'bursa']
+
+        for prov in df_results['province'].unique():
+            norm_id = normalize_id(prov)
+            prov_winners_dict[norm_id] = selected_party
+            v_val = prov_votes_map.get(prov, 0.0)
+            ratio = (v_val - min_v) / v_range
+            color_val = get_heatmap_color(base_hex, ratio)
+            custom_heatmap_colors[norm_id] = color_val
+            
+            # Büyükşehirlerin alt seçim çevreleri (istanbul1, istanbul2 vb.) için de aynı rengi ata
+            if norm_id in metro_provinces:
+                for sub_id in [f"{norm_id}1", f"{norm_id}2", f"{norm_id}3"]:
+                    custom_heatmap_colors[sub_id] = color_val
+
+        for dist in df_results['district'].unique():
+            norm_dist = normalize_id(dist)
+            dist_winners_dict[norm_dist] = selected_party
+            v_val = dist_votes_map.get(dist, 0.0)
+            ratio = (v_val - min_v) / v_range
+            custom_heatmap_colors[norm_dist] = get_heatmap_color(base_hex, ratio)
 
     tooltip_dict = {}
     def create_tooltip_html(title_str, group_data):
-        sorted_g = group_data.sort_values(by='new_vote_pct', ascending=False).head(5)
+        sorted_g = group_data.sort_values(by='new_vote_pct', ascending=False)
         html = f'<div class="tip-header">{title_str}</div>'
-        for _, r in sorted_g.iterrows():
-            pct = r['new_vote_pct']
-            if pct > 0.0:
-                party = r['party']
-                seats = int(r['seats_won'])
-                color = party_colors.get(party, '#888888')
+        if map_mode == "1. Partiler (Varsayılan)":
+            sorted_g = sorted_g.head(5)
+            for _, r in sorted_g.iterrows():
+                pct = r['new_vote_pct']
+                if pct > 0.0:
+                    party = r['party']
+                    seats = int(r['seats_won'])
+                    color = party_colors.get(party, '#888888')
+                    html += f'''
+                    <div class="tip-row">
+                        <div class="tip-party">{party}</div>
+                        <div class="tip-seat">{seats}</div>
+                        <div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {pct}%; background-color: {color};"></div></div>
+                        <div class="tip-pct">%{pct:.1f}</div>
+                    </div>
+                    '''
+        else:
+            selected_party = map_mode.split(" ")[0]
+            r = group_data[group_data['party'] == selected_party]
+            if not r.empty:
+                pct = r['new_vote_pct'].values[0]
+                seats = int(r['seats_won'].sum())
+                color = party_colors.get(selected_party, '#888888')
                 html += f'''
                 <div class="tip-row">
-                    <div class="tip-party">{party}</div>
+                    <div class="tip-party">{selected_party}</div>
                     <div class="tip-seat">{seats}</div>
                     <div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {pct}%; background-color: {color};"></div></div>
                     <div class="tip-pct">%{pct:.1f}</div>
@@ -951,7 +1033,7 @@ with tab_meclis:
         tooltip_dict[normalize_id(prov)] = create_tooltip_html(f"📌 {prov}", prov_agg)
 
     district_seats_data = df_results.groupby(['district', 'party'])['seats_won'].sum().to_dict()
-    colored_svg_html = render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, district_seats_data, svg_file_name="turkiye.svg", show_badges=True)
+    colored_svg_html = render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, district_seats_data, svg_file_name="turkiye.svg", show_badges=show_badges_flag, custom_colors=custom_heatmap_colors)
 
     components.html(colored_svg_html, height=500, scrolling=False)
 
