@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import json
 import copy
 import io
+import math
 
 # ==========================================
 # SAYFA AYARLARI VE DİNAMİK TEMA MOTORU
@@ -767,35 +768,94 @@ with col2:
     with st.container(border=True):
         st.markdown("<h3 style='text-align: center; margin-top: 0;'>MECLİS GRAFİĞİ</h3>", unsafe_allow_html=True)
         df_plot = national_summary_df[national_summary_df['Vekil'] > 0].copy()
-        toplam_vekil = df_plot['Vekil'].sum()
+        toplam_vekil = int(df_plot['Vekil'].sum())
 
         istenen_sira = ['TIP', 'DEM', 'CHP', 'YENI', 'IYI', 'SAADET', 'ZAFER', 'A', 'AKP', 'MHP', 'BBP', 'YRP']
         sirali_partiler = [p for p in istenen_sira if p in df_plot['Parti'].values]
         for p in df_plot['Parti'].values:
             if p not in sirali_partiler: sirali_partiler.append(p)
 
-        ordered_values = [df_plot[df_plot['Parti'] == p]['Vekil'].values[0] for p in sirali_partiler]
-        ordered_colors = [party_colors.get(p, "#888888") for p in sirali_partiler]
+        assigned_parties = []
+        for p in sirali_partiler:
+            seat_count = int(df_plot[df_plot['Parti'] == p]['Vekil'].values[0])
+            assigned_parties.extend([p] * seat_count)
 
-        labels = sirali_partiler + ["Gizli_Yari"]
-        values = ordered_values + [toplam_vekil]
-        colors = ordered_colors + ["rgba(0,0,0,0)"]
-        line_widths = [2] * len(sirali_partiler) + [0]
+        fig = go.Figure()
 
-        fig = go.Figure(data=[go.Pie(
-            labels=labels, values=values, hole=0.55, rotation=-90, direction="clockwise", sort=False,
-            marker=dict(colors=colors, line=dict(color=c_bg, width=line_widths)),
-            textinfo='label+value', textposition='inside', insidetextorientation='horizontal', hoverinfo='none'
-        )])
+        if toplam_vekil > 0:
+            radii = list(range(10, 22)) 
+            sum_radii = sum(radii)
+            seats_per_row = [round(toplam_vekil * (r / sum_radii)) for r in radii]
+            
+            diff = toplam_vekil - sum(seats_per_row)
+            if diff != 0: 
+                seats_per_row[-1] += diff
+            
+            points = []
+            for r, s in zip(radii, seats_per_row):
+                if s <= 0: continue
+                for j in range(s):
+                    angle = math.pi - (math.pi * j) / max(1, (s - 1))
+                    x = r * math.cos(angle)
+                    y = r * math.sin(angle)
+                    points.append({'x': x, 'y': y, 'angle': angle, 'r': r})
+
+            points.sort(key=lambda p: (p['angle'], -p['r']), reverse=True)
+            
+            for p in sirali_partiler:
+                p_indices = [i for i, party in enumerate(assigned_parties) if party == p]
+                if not p_indices: continue
+                
+                p_x = [points[i]['x'] for i in p_indices if i < len(points)]
+                p_y = [points[i]['y'] for i in p_indices if i < len(points)]
+                
+                fig.add_trace(go.Scatter(
+                    x=p_x, y=p_y,
+                    mode='markers',
+                    name=p,
+                    marker=dict(
+                        size=8.5, 
+                        color=party_colors.get(p, "#888888"), 
+                        line=dict(width=0.5, color=c_bg)
+                    ),
+                    hoverinfo='text',
+                    hovertext=[f"{p}"] * len(p_x)
+                ))
+
+            # 301 Çoğunluk Çizgisi
+            fig.add_shape(
+                type="line",
+                x0=0, y0=9, x1=0, y1=22.5,
+                line=dict(color="#ffffff", width=2, dash="dashdot")
+            )
+            
+            fig.add_annotation(
+                x=0, y=23.8,
+                text="<b>Çoğunluk</b>",
+                showarrow=False,
+                font=dict(color="#ffffff", size=15)
+            )
+
+            # Ortadaki Toplam Vekil Sayısı
+            fig.add_annotation(
+                x=0, y=2, xref='x', yref='y',
+                text=f"<b><span style='font-size:38px; color:{c_text}'>{toplam_vekil}</span></b>", 
+                yanchor='middle', xanchor='center', showarrow=False
+            )
+
+        # Soldaki tablo satır sayısına göre sağ kutunun boyunu milimetrik ayarlıyoruz (Her satır yaklaşık 52px)
+        num_rows = len(national_summary_df)
+        dynamic_height = max(450, (num_rows * 52) + 65)
 
         fig.update_layout(
-            showlegend=False, margin=dict(t=15, b=15, l=0, r=0), height=420,
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            annotations=[dict(text=f"<b><span style='font-size:34px; color:{c_text}'>{toplam_vekil}</span></b>", x=0.5, y=0.5, yanchor='bottom', showarrow=False)]
+            showlegend=False, 
+            margin=dict(t=40, b=20, l=15, r=15), 
+            height=dynamic_height, 
+            paper_bgcolor='rgba(0,0,0,0)', 
+            plot_bgcolor='rgba(0,0,0,0)',
+            xaxis=dict(visible=False, scaleanchor="y", scaleratio=1),
+            yaxis=dict(visible=False)
         )
-        fig.update_traces(texttemplate="%{label}<br>%{value}", selector=dict(type='pie'))
-        fig.data[0].texttemplate = [f"{l}<br>{v}" for l, v in zip(sirali_partiler, ordered_values)] + [""]
-
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 # --- MECLİS SVG HARİTA BÖLÜMÜ ---
