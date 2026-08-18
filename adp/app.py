@@ -1064,7 +1064,7 @@ with tab_meclis:
     with col_m_title:
         st.subheader("Genel Seçim İl Haritası")
     with col_m_filter:
-        map_mode = st.selectbox("Harita Görünüm Modu:", options=["1. Partiler (Varsayılan)"] + [f"{p} Oy Oranı Isı Haritası" for p in PARTIES], key="map_display_mode")
+        map_mode = st.selectbox("Harita Görünüm Modu:", options=["1. Partiler (Varsayılan)"] + [p for p in PARTIES], key="map_display_mode")
 
     prov_winners_dict = {}
     dist_winners_dict = {}
