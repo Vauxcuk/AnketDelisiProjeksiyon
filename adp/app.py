@@ -919,6 +919,86 @@ with st.container(border=True):
 
     components.html(colored_svg_html, height=500, scrolling=False)
 
+# ==========================================
+# İL BAZLI OY VE VEKİL DAĞILIMI (DEĞİŞİM DELTA GÖSTERGELİ)
+# ==========================================
+st.markdown("<br>", unsafe_allow_html=True)
+st.subheader("İl Bazlı Oy ve Vekil Dağılımı")
+
+with st.container(border=True):
+    provinces_list = sorted(df_results['province'].unique().tolist())
+    
+    selected_province_bar = st.selectbox(
+        "Detaylı sonuçlarını görmek istediğiniz ili seçin:", 
+        options=provinces_list,
+        key="selected_prov_bar_detail"
+    )
+
+    if selected_province_bar:
+        prov_df = df_results[df_results['province'] == selected_province_bar]
+        
+        # 2023 baz verilerini yükleyip il bazında parti oylarını hesaplayalım
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        file_23 = os.path.join(current_dir, "ysk_2023_secim_verisi.csv")
+        df_23_raw = pd.read_csv(file_23)
+        
+        # 2023 il/bölge bazlı parti oy yüzdelerini normalize et
+        df_23_raw['vote_23_pct'] = df_23_raw.groupby('district')['base_vote_pct'].transform(lambda x: (x / x.sum()) * 100)
+        
+        # Seçilen ilin altındaki ilçelerin/bölgelerin 2023 ortalama oy oranlarını bul
+        prov_23_subset = df_23_raw[df_23_raw['district'].apply(lambda x: str(x).split('-')[0].strip().lower()) == selected_province_bar.lower()]
+        base_23_prov_dict = prov_23_subset.groupby('party')['vote_23_pct'].mean().to_dict()
+
+        # Simülasyon sonuçlarını derle
+        prov_summary_bar = prov_df.groupby('party').agg({
+            'new_vote_pct': 'mean',
+            'seats_won': 'sum'
+        }).reset_index().sort_values(by=['new_vote_pct', 'seats_won'], ascending=[False, False])
+        
+        st.markdown(f"<h3 style='text-align: center; margin-bottom: 20px;'>{selected_province_bar.upper()} SEÇİM SONUÇLARI</h3>", unsafe_allow_html=True)
+        
+        max_prov_vote = prov_summary_bar['new_vote_pct'].max()
+        if max_prov_vote == 0: max_prov_vote = 1.0
+
+        prov_html_blocks = [f"""
+        <style>
+        .prov-vote-delta {{ font-size: 11px; margin-left: 6px; font-weight: 400; opacity: 0.9; }}
+        </style>
+        <div style="max-width: 100%; margin: 10px 0 10px 0;">
+        """]
+
+        for _, row in prov_summary_bar.iterrows():
+            party = row['party']
+            seats = int(row['seats_won'])
+            vote_pct = row['new_vote_pct']
+            
+            if vote_pct <= 0.0 and seats <= 0:
+                continue
+                
+            # 2023'e göre oy değişimini hesapla
+            base_23_val = base_23_prov_dict.get(party, 0.0)
+            vote_delta = vote_pct - base_23_val
+            
+            if vote_delta > 0: v_delta_str = f"(+{vote_delta:.1f})"
+            elif vote_delta < 0: v_delta_str = f"({vote_delta:.1f})"
+            else: v_delta_str = ""
+                
+            color = party_colors.get(party, "#888888")
+            relative_width = (vote_pct / max_prov_vote) * 100
+                
+            prov_html_blocks.append(
+                f'<div class="custom-row">'
+                f'<div class="custom-party">{party}</div>'
+                f'<div class="custom-seat"><span class="seat-num">{seats}</span></div>'
+                f'<div class="custom-bar-bg">'
+                f'<div class="custom-bar-fill" style="width: {relative_width}%; background-color: {color}; min-width: 90px;">'
+                f'%{vote_pct:.1f} <span class="prov-vote-delta">{v_delta_str}</span>'
+                f'</div></div></div>'
+            )
+            
+        prov_html_blocks.append("</div>")
+        st.markdown("".join(prov_html_blocks), unsafe_allow_html=True)
+
 # --- TABLO BÖLÜMÜ (COLLAPSIBLE) ---
 with st.expander("📊 İl İl Dağılım Tablosu", expanded=False):
     pivot_df = df_results.pivot(index='district', columns='party', values=['new_vote_pct', 'seats_won'])
