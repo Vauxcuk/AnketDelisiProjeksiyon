@@ -175,7 +175,7 @@ def load_base_data():
         seats_df = df_23[['district', 'seat_count']].drop_duplicates(subset=['district'])
 
         df_merged = pd.merge(df_23_clean[['district', 'party', 'vote_23']], df_24_clean[['district', 'party', 'vote_24']], on=['district', 'party'], how='outer').fillna(0)
-        df_merged['base_vote_pct'] = (df_merged['vote_23'] * 0.85) + (df_merged['vote_24'] * 0.15)
+        df_merged['base_vote_pct'] = (df_merged['vote_23'] * 0.9) + (df_merged['vote_24'] * 0.1)
         df = pd.merge(df_merged, seats_df, on='district', how='left')
         return df
     except FileNotFoundError as e:
@@ -442,7 +442,11 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
     for aly_name, p_rows in sorted_blocks:
         start_idx = len(sorted_party_rows)
         sorted_party_rows.extend(sorted(p_rows, key=lambda r: r['Normalize Oy (%)'], reverse=True))
-        if len(sorted_party_rows) - 1 >= start_idx and aly_name in alliances_dict:
+        
+        # Sadece gerçek ittifakların üzerine çizgi ve isim ekle (ittifak adı partinin kendi adıyla aynıysa tekil partidir)
+        is_independent = (len(p_rows) == 1 and aly_name == p_rows[0]['Parti'])
+        
+        if len(sorted_party_rows) - 1 >= start_idx and aly_name in alliances_dict and not is_independent:
             block_spans.append((aly_name, start_idx, len(sorted_party_rows) - 1))
 
     if not sorted_party_rows: sorted_party_rows = [row for _, row in national_summary_df.head(4).iterrows()]
