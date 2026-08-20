@@ -1017,69 +1017,86 @@ with tab_meclis:
             st.markdown(f"<div style='text-align:center; padding: 20px 0;'>{ui_svg}</div>", unsafe_allow_html=True)
             
     # --- DİNAMİK İLÇE ALGILAMA MODÜLÜ ---
+    # Python'un Türkçe karakter hatalarını (Hakkari -> Hakkarı) önlemek için 81 ilin kesin sözlüğü
+    PROVINCE_NAMES = {
+        'adana': 'Adana', 'adiyaman': 'Adıyaman', 'afyonkarahisar': 'Afyonkarahisar', 'agri': 'Ağrı',
+        'amasya': 'Amasya', 'ankara': 'Ankara', 'antalya': 'Antalya', 'artvin': 'Artvin', 'aydin': 'Aydın',
+        'balikesir': 'Balıkesir', 'bilecik': 'Bilecik', 'bingol': 'Bingöl', 'bitlis': 'Bitlis',
+        'bolu': 'Bolu', 'burdur': 'Burdur', 'bursa': 'Bursa', 'canakkale': 'Çanakkale', 'cankiri': 'Çankırı',
+        'corum': 'Çorum', 'denizli': 'Denizli', 'diyarbakir': 'Diyarbakır', 'edirne': 'Edirne',
+        'elazig': 'Elazığ', 'erzincan': 'Erzincan', 'erzurum': 'Erzurum', 'eskisehir': 'Eskişehir',
+        'gaziantep': 'Gaziantep', 'giresun': 'Giresun', 'gumushane': 'Gümüşhane', 'hakkari': 'Hakkari',
+        'hatay': 'Hatay', 'isparta': 'Isparta', 'mersin': 'Mersin', 'istanbul': 'İstanbul', 'izmir': 'İzmir',
+        'kars': 'Kars', 'kastamonu': 'Kastamonu', 'kayseri': 'Kayseri', 'kirklareli': 'Kırklareli',
+        'kirsehir': 'Kırşehir', 'kocaeli': 'Kocaeli', 'konya': 'Konya', 'kutahya': 'Kütahya',
+        'malatya': 'Malatya', 'manisa': 'Manisa', 'kahramanmaras': 'Kahramanmaraş', 'mardin': 'Mardin',
+        'mugla': 'Muğla', 'mus': 'Muş', 'nevsehir': 'Nevşehir', 'nigde': 'Niğde', 'ordu': 'Ordu',
+        'rize': 'Rize', 'sakarya': 'Sakarya', 'samsun': 'Samsun', 'siirt': 'Siirt', 'sinop': 'Sinop',
+        'sivas': 'Sivas', 'tekirdag': 'Tekirdağ', 'tokat': 'Tokat', 'trabzon': 'Trabzon', 'tunceli': 'Tunceli',
+        'sanliurfa': 'Şanlıurfa', 'usak': 'Uşak', 'van': 'Van', 'yozgat': 'Yozgat', 'zonguldak': 'Zonguldak',
+        'aksaray': 'Aksaray', 'bayburt': 'Bayburt', 'karaman': 'Karaman', 'kirikkale': 'Kırıkkale',
+        'batman': 'Batman', 'sirnak': 'Şırnak', 'bartin': 'Bartın', 'ardahan': 'Ardahan', 'igdir': 'Iğdır',
+        'yalova': 'Yalova', 'karabuk': 'Karabük', 'kilis': 'Kilis', 'osmaniye': 'Osmaniye', 'duzce': 'Düzce'
+    }
+
+    def get_display_name(norm_id):
+        return PROVINCE_NAMES.get(norm_id, norm_id.title())
+
     def get_available_cities():
         harita_dir = os.path.join(current_dir, "ilce", "harita")
         cities = []
         if os.path.exists(harita_dir):
             for file in os.listdir(harita_dir):
-                if file.endswith(".svg"):
-                    cities.append(file.replace(".svg", ""))
-        return sorted(cities)
-
-    def tr_capitalize(word):
-        # Türkçe karakterleri düzgün büyütebilmek için küçük bir yardımcı
-        tr_map = {'istanbul': 'İstanbul', 'kirklareli': 'Kırklareli', 'izmir': 'İzmir', 'ankara': 'Ankara'}
-        return tr_map.get(word, word.replace('i', 'İ').capitalize())
+                if file.lower().endswith(".svg"):
+                    cities.append(normalize_id(file[:-4]))
+        return sorted(list(set(cities)))
 
     available_cities = get_available_cities()
-    scope_options = ["Türkiye Geneli"]
-    scope_mapping = {}
-    
-    for c in available_cities:
-        display_name = f"{tr_capitalize(c)} İlçeleri"
-        scope_options.append(display_name)
-        scope_mapping[display_name] = c
+    # Ekranda görünecek tüm iller için arka plan ID'lerini hazırlıyoruz
+    all_provinces_norm = sorted(list(set([normalize_id(p) for p in df_results['province'].unique()])))
 
-    # --- GENEL SEÇİM İL HARİTASI VE ISI HARİTASI ---
+    # --- BİRLEŞTİRİLMİŞ BÖLGESEL ANALİZ EKRANI ---
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    col_m_title, col_m_scope, col_m_filter = st.columns([1.2, 0.8, 1])
-    with col_m_title: 
-        st.subheader("Seçim Haritaları")
+    st.subheader("🗺️ Bölgesel Seçim Analizi ve Haritalar")
+
+    col_m_scope, col_m_filter = st.columns([1, 1])
     with col_m_scope:
-        map_scope = st.selectbox("Harita Bölgesi:", options=scope_options, key="map_scope")
-    with col_m_filter: 
+        master_region = st.selectbox("İncelenecek Bölge / İl Seçin:", options=["Türkiye Geneli"] + [get_display_name(p) for p in all_provinces_norm], key="master_region_select")
+    with col_m_filter:
         map_mode = st.selectbox("Harita Görünüm Modu:", options=["1. Partiler (Varsayılan)"] + PARTIES, key="map_display_mode")
 
     prov_winners_dict, dist_winners_dict, custom_heatmap_colors = {}, {}, {}
-    
-    # --- BÖLGE: TÜRKİYE GENELİ ---
-    if map_scope == "Türkiye Geneli":
+    # Ekranda seçilen ismi (Örn: Hakkari) arka plan işlemleri için tekrar ID formatına dönüştür
+    selected_norm = normalize_id(master_region) if master_region != "Türkiye Geneli" else "turkiye"
+
+    # 1. HARİTA VE VERİ HEDEFİNİ BELİRLEME
+    if master_region == "Türkiye Geneli":
         target_svg = "turkiye.svg"
         df_map_data = df_results.copy()
         show_badges_flag = True if map_mode == "1. Partiler (Varsayılan)" else False
-        
-    # --- BÖLGE: İLÇE HARİTALARI (DİNAMİK OTOMATİK ALGILAMA) ---
     else:
-        show_badges_flag = False
-        city_key = scope_mapping[map_scope]
-        target_svg = f"{city_key}.svg"
-            
-        raw_city_df = load_city_data(city_key)
-        
-        if not raw_city_df.empty:
-            city_df_base, _ = apply_custom_parties(raw_city_df, st.session_state.custom_parties_def)
-            df_map_data = run_simulation(city_df_base, base_national_dict, user_inputs_norm, alliances, joint_lists, params["threshold_input"])
+        if selected_norm in available_cities:
+            target_svg = f"{selected_norm}.svg"
+            raw_city_df = load_city_data(selected_norm)
+            if not raw_city_df.empty:
+                city_df_base, _ = apply_custom_parties(raw_city_df, st.session_state.custom_parties_def)
+                df_map_data = run_simulation(city_df_base, base_national_dict, user_inputs_norm, alliances, joint_lists, params["threshold_input"])
+            else:
+                st.error(f"🚨 {master_region} veri dosyaları bulunamadı! (ilce/veri/{selected_norm}2023.csv ve 2024.csv)")
+                df_map_data = pd.DataFrame()
+            show_badges_flag = False
         else:
-            st.error(f"🚨 {tr_capitalize(city_key)} veri dosyaları bulunamadı! Lütfen 'ilce/veri/{city_key}2023.csv' ve 'ilce/veri/{city_key}2024.csv' dosyalarını yüklediğinden emin ol.")
-            df_map_data = pd.DataFrame()
+            target_svg = "turkiye.svg"
+            df_map_data = df_results.copy()
+            show_badges_flag = True if map_mode == "1. Partiler (Varsayılan)" else False
+            st.info(f"ℹ️ **{master_region}** için ilçe haritası (.svg) henüz yüklenmediğinden Türkiye geneli haritası üzerinden gösteriliyor.")
 
+    # 2. RENK VE TOOLTIP HESAPLAMALARI
     if not df_map_data.empty:
         if map_mode == "1. Partiler (Varsayılan)":
-            if map_scope == "Türkiye Geneli":
+            if target_svg == "turkiye.svg":
                 prov_winners_dict = {normalize_id(r['province']): r['party'] for _, r in df_map_data.groupby(['province', 'party'])['new_vote_pct'].mean().reset_index().loc[df_map_data.groupby(['province', 'party'])['new_vote_pct'].mean().reset_index().groupby('province')['new_vote_pct'].idxmax()].iterrows()}
             dist_winners_dict = {normalize_id(r['district']): r['party'] for _, r in df_map_data.loc[df_map_data.groupby('district')['new_vote_pct'].idxmax()].iterrows()}
-            
         else:
             selected_party = map_mode.split(" ")[0]
             base_hex = party_colors.get(selected_party, "#3485fd")
@@ -1089,14 +1106,13 @@ with tab_meclis:
             all_vals = list(prov_votes_map.values()) + list(dist_votes_map.values())
             min_v, v_range = (min(all_vals) if all_vals else 0.0), ((max(all_vals) if all_vals else 100.0) - (min(all_vals) if all_vals else 0.0)) or 1.0
 
-            if map_scope == "Türkiye Geneli":
+            if target_svg == "turkiye.svg":
                 for prov in df_map_data['province'].unique():
                     norm_id = normalize_id(prov)
                     prov_winners_dict[norm_id] = selected_party
                     custom_heatmap_colors[norm_id] = get_heatmap_color(base_hex, (prov_votes_map.get(prov, 0.0) - min_v) / v_range)
                     if norm_id in ['istanbul', 'ankara', 'izmir', 'bursa']:
                         for sub_id in [f"{norm_id}1", f"{norm_id}2", f"{norm_id}3"]: custom_heatmap_colors[sub_id] = custom_heatmap_colors[norm_id]
-                        
             for dist in df_map_data['district'].unique():
                 norm_dist = normalize_id(dist)
                 dist_winners_dict[norm_dist] = selected_party
@@ -1109,7 +1125,7 @@ with tab_meclis:
                 if r['new_vote_pct'] > 0.0: html += f'<div class="tip-row"><div class="tip-party">{r["party"]}</div><div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {r["new_vote_pct"]}%; background-color: {party_colors.get(r["party"], "#888888")};"></div></div><div class="tip-pct">%{r["new_vote_pct"]:.1f}</div></div>'
             tooltip_dict[normalize_id(dist)] = html
 
-        if map_scope == "Türkiye Geneli":
+        if target_svg == "turkiye.svg":
             for prov, group in df_map_data.groupby('province'):
                 norm_prov = normalize_id(prov)
                 html = f'<div class="tip-header">📌 {prov}</div>'
@@ -1117,12 +1133,41 @@ with tab_meclis:
                     if r['new_vote_pct'] > 0.0: html += f'<div class="tip-row"><div class="tip-party">{r["party"]}</div><div class="tip-seat">{int(r["seats_won"])}</div><div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {r["new_vote_pct"]}%; background-color: {party_colors.get(r["party"], "#888888")};"></div></div><div class="tip-pct">%{r["new_vote_pct"]:.1f}</div></div>'
                 tooltip_dict[norm_prov] = html
 
-        # Haritayı Temiz Şekilde Ekrana Bas
-        components.html(
-            render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, df_results.groupby(['district', 'party'])['seats_won'].sum().to_dict(), svg_file_name=target_svg, show_badges=show_badges_flag, custom_colors=custom_heatmap_colors), 
-            height=550, 
-            scrolling=False
-        )
+        # 3. YAN YANA EKRANA BASMA (HARİTA + İL SONUÇLARI)
+        if master_region == "Türkiye Geneli":
+            components.html(render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, df_results.groupby(['district', 'party'])['seats_won'].sum().to_dict(), svg_file_name=target_svg, show_badges=show_badges_flag, custom_colors=custom_heatmap_colors), height=550, scrolling=False)
+        else:
+            col_map_view, col_bar_view = st.columns([1.3, 1])
+            
+            with col_map_view:
+                components.html(render_colored_svg(prov_winners_dict, dist_winners_dict, party_colors, tooltip_dict, df_results.groupby(['district', 'party'])['seats_won'].sum().to_dict(), svg_file_name=target_svg, show_badges=show_badges_flag, custom_colors=custom_heatmap_colors), height=550, scrolling=False)
+            
+            with col_bar_view:
+                with st.container(border=True):
+                    prov_23_subset = pd.read_csv(os.path.join(current_dir, "ysk_2023_secim_verisi.csv"))
+                    
+                    prov_23_subset = prov_23_subset[prov_23_subset['district'].apply(lambda x: normalize_id(str(x).split('-')[0])) == selected_norm]
+                    
+                    base_23_seats_dict = prov_23_subset.groupby('party')['seats_won_2023'].sum().to_dict()
+                    prov_23_subset['vote_23_pct'] = prov_23_subset.groupby('district')['base_vote_pct'].transform(lambda x: (x / x.sum()) * 100)
+                    base_23_prov_dict = prov_23_subset.groupby('party')['vote_23_pct'].mean().to_dict()
+                    
+                    prov_summary_bar = df_results[df_results['province'].apply(normalize_id) == selected_norm].groupby('party').agg({'new_vote_pct': 'mean','seats_won': 'sum'}).reset_index().sort_values(by=['new_vote_pct', 'seats_won'], ascending=[False, False])
+                    
+                    # Başlıkta Hakkari -> HAKKARİ hatasını engelleyen düzeltme
+                    display_header = master_region.replace('i', 'İ').upper()
+                    st.markdown(f"<h3 style='text-align: center; margin-bottom: 20px;'>{display_header} SONUÇLARI</h3>", unsafe_allow_html=True)
+                    max_prov_vote = prov_summary_bar['new_vote_pct'].max() or 1.0
+                    
+                    prov_html_blocks = ["<style>.prov-vote-delta { font-size: 11px; margin-left: 6px; font-weight: 400; opacity: 0.9; } .prov-seat-delta { font-size: 10px; font-weight: 900; display: block; line-height: 1; } .delta-pos { color: #00E676; } .delta-neg { color: #FF3D00; } .delta-neu { color: #9E9E9E; }</style><div style='max-width: 100%; margin: 10px 0 10px 0;'>"]
+                    for _, row in prov_summary_bar.iterrows():
+                        if row['new_vote_pct'] <= 0.0 and row['seats_won'] <= 0: continue
+                        vote_delta = row['new_vote_pct'] - base_23_prov_dict.get(row['party'], 0.0)
+                        seat_delta = int(row['seats_won']) - base_23_seats_dict.get(row['party'], 0)
+                        v_delta_str = f"(+{vote_delta:.1f})" if vote_delta > 0 else (f"({vote_delta:.1f})" if vote_delta < 0 else "")
+                        s_delta_html = f"<span class='prov-seat-delta delta-pos'>▲ {seat_delta}</span>" if seat_delta > 0 else (f"<span class='prov-seat-delta delta-neg'>▼ {abs(seat_delta)}</span>" if seat_delta < 0 else "<span class='prov-seat-delta delta-neu'>-</span>")
+                        prov_html_blocks.append(f"<div class='custom-row'><div class='custom-party'>{row['party']}</div><div class='custom-seat'><span class='seat-num'>{int(row['seats_won'])}</span>{s_delta_html}</div><div class='custom-bar-bg'><div class='custom-bar-fill' style='width: {(row['new_vote_pct'] / max_prov_vote) * 100}%; background-color: {party_colors.get(row['party'], '#888888')}; min-width: 90px;'>%{row['new_vote_pct']:.1f} <span class='prov-vote-delta'>{v_delta_str}</span></div></div></div>")
+                    st.markdown("".join(prov_html_blocks) + "</div>", unsafe_allow_html=True)
 
     # ------------------------------------------
     # İNFOGRAFİK İNDİRME MOTORU (HARİTANIN ALTINDA)
@@ -1134,7 +1179,7 @@ with tab_meclis:
     <div id="infographic-container" style="display:none;">
         {generate_infographic_svg(national_summary_df, render_colored_svg(info_prov_winners_dict, info_dist_winners_dict, party_colors, dict(), df_results.groupby(['district', 'party'])['seats_won'].sum().to_dict(), show_badges=False), toplam_vekil, assigned_parties, party_colors, alliances)}
     </div>
-    <button id="download-btn" style="background-color: #eb252d; color: white; border: 3px solid #ffffff; box-shadow: 4px 4px 0px #ffffff; font-weight: 900; padding: 14px 20px; font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; cursor: pointer; width: 100%; margin-top: 15px; margin-bottom: 25px;">📸 İnfografiği PNG Olarak İndir</button>
+    <button id="download-btn" style="background-color: #eb252d; color: white; border: 3px solid #ffffff; box-shadow: 4px 4px 0px #ffffff; font-weight: 900; padding: 14px 20px; font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; cursor: pointer; width: 100%; margin-top: 15px; margin-bottom: 25px;">📸 İnfografiği PNG Olarak İndir (Tasarım Şablonu)</button>
     <script>
     document.getElementById('download-btn').addEventListener('click', function() {{
         var btn = this; btn.innerText = "Görsel Hazırlanıyor...";
@@ -1151,32 +1196,6 @@ with tab_meclis:
     }});
     </script>
     """, height=90)
-
-    # --- İL BAZLI OY VE VEKİL DAĞILIMI ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("İl Bazlı Oy ve Vekil Dağılımı")
-    with st.container(border=True):
-        selected_province_bar = st.selectbox("Detaylı sonuçlarını görmek istediğiniz ili seçin:", options=sorted(df_results['province'].unique().tolist()), key="selected_prov_bar_detail")
-        if selected_province_bar:
-            prov_23_subset = pd.read_csv(os.path.join(current_dir, "ysk_2023_secim_verisi.csv"))
-            prov_23_subset = prov_23_subset[prov_23_subset['district'].apply(lambda x: str(x).split('-')[0].strip().lower()) == selected_province_bar.lower()]
-            base_23_seats_dict = prov_23_subset.groupby('party')['seats_won_2023'].sum().to_dict()
-            prov_23_subset['vote_23_pct'] = prov_23_subset.groupby('district')['base_vote_pct'].transform(lambda x: (x / x.sum()) * 100)
-            base_23_prov_dict = prov_23_subset.groupby('party')['vote_23_pct'].mean().to_dict()
-            
-            prov_summary_bar = df_results[df_results['province'] == selected_province_bar].groupby('party').agg({'new_vote_pct': 'mean','seats_won': 'sum'}).reset_index().sort_values(by=['new_vote_pct', 'seats_won'], ascending=[False, False])
-            st.markdown(f"<h3 style='text-align: center; margin-bottom: 20px;'>{selected_province_bar.upper()} SEÇİM SONUÇLARI</h3>", unsafe_allow_html=True)
-            max_prov_vote = prov_summary_bar['new_vote_pct'].max() or 1.0
-            
-            prov_html_blocks = ["<style>.prov-vote-delta { font-size: 11px; margin-left: 6px; font-weight: 400; opacity: 0.9; } .prov-seat-delta { font-size: 10px; font-weight: 900; display: block; line-height: 1; } .delta-pos { color: #00E676; } .delta-neg { color: #FF3D00; } .delta-neu { color: #9E9E9E; }</style><div style='max-width: 100%; margin: 10px 0 10px 0;'>"]
-            for _, row in prov_summary_bar.iterrows():
-                if row['new_vote_pct'] <= 0.0 and row['seats_won'] <= 0: continue
-                vote_delta = row['new_vote_pct'] - base_23_prov_dict.get(row['party'], 0.0)
-                seat_delta = int(row['seats_won']) - base_23_seats_dict.get(row['party'], 0)
-                v_delta_str = f"(+{vote_delta:.1f})" if vote_delta > 0 else (f"({vote_delta:.1f})" if vote_delta < 0 else "")
-                s_delta_html = f"<span class='prov-seat-delta delta-pos'>▲ {seat_delta}</span>" if seat_delta > 0 else (f"<span class='prov-seat-delta delta-neg'>▼ {abs(seat_delta)}</span>" if seat_delta < 0 else "<span class='prov-seat-delta delta-neu'>-</span>")
-                prov_html_blocks.append(f"<div class='custom-row'><div class='custom-party'>{row['party']}</div><div class='custom-seat'><span class='seat-num'>{int(row['seats_won'])}</span>{s_delta_html}</div><div class='custom-bar-bg'><div class='custom-bar-fill' style='width: {(row['new_vote_pct'] / max_prov_vote) * 100}%; background-color: {party_colors.get(row['party'], '#888888')}; min-width: 90px;'>%{row['new_vote_pct']:.1f} <span class='prov-vote-delta'>{v_delta_str}</span></div></div></div>")
-            st.markdown("".join(prov_html_blocks) + "</div>", unsafe_allow_html=True)
 
     # --- TABLO BÖLÜMÜ ---
     with st.expander("📊 İl İl Dağılım Tablosu", expanded=False):
