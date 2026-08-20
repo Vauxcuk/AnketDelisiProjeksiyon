@@ -233,9 +233,9 @@ PARTIES = list(DEFAULT_TRANSITIONS.keys()) + list(st.session_state.custom_partie
 
 # Varsayılan renk atamaları (YENI ve A eklendi)
 party_colors = {
-    'AKP': '#FDA000', 'CHP': '#3485fd', 'MHP': '#137BBB', 'DEM': '#90268F', 
-    'IYI': '#FFC107', 'YRP': '#009840', 'TIP': '#FF1D25', 'ZAFER': '#474647', 
-    'BBP': '#B22222', 'SAADET': '#ff2e84', 'YENI': '#A7050E', 'A': '#20379f'
+    'AKP': '#FDA000', 'CHP': '#c80814', 'MHP': '#137BBB', 'DEM': '#90268F', 
+    'IYI': '#63bbed', 'YRP': '#009840', 'TIP': '#FF1D25', 'ZAFER': '#474647', 
+    'BBP': '#824d5d', 'SAADET': '#ff2e84', 'YENI': '#A7050E', 'A': '#20379f'
 }
 for cp_name, cp_data in st.session_state.custom_parties_def.items():
     party_colors[cp_name] = cp_data['color']
@@ -600,10 +600,9 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
         start_idx = len(sorted_party_rows)
         sorted_party_rows.extend(sorted(p_rows, key=lambda r: r['Normalize Oy (%)'], reverse=True))
         
-        # Sadece gerçek ittifakların üzerine çizgi ve isim ekle (ittifak adı partinin kendi adıyla aynıysa tekil partidir)
-        is_independent = (len(p_rows) == 1 and aly_name == p_rows[0]['Parti'])
-        
-        if len(sorted_party_rows) - 1 >= start_idx and aly_name in alliances_dict and not is_independent:
+        # YENİ KURAL: Eğer meclise bu ittifaktan (veya bloktan) 1'den FAZLA parti girdiyse çizgiyi/ismi göster. 
+        # Sadece 1 parti girdiyse (veya bağımsızsa) hiçbir şey çizme.
+        if len(sorted_party_rows) - 1 >= start_idx and aly_name in alliances_dict and len(p_rows) > 1:
             block_spans.append((aly_name, start_idx, len(sorted_party_rows) - 1))
 
     if not sorted_party_rows: sorted_party_rows = [row for _, row in national_summary_df.head(4).iterrows()]
@@ -631,7 +630,6 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
     svg += f'<svg x="30" y="195" width="1120" height="520">{map_svg_clean}</svg>'
 
     main_logo_data = get_svg_file_base64(os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.svg"))
-    # Görseldeki gibi en alt sol köşeye dayalı ve daha orantılı yerleşim
     svg += '<g transform="translate(30, 870)">'
     if main_logo_data:
         svg += f'<image href="{main_logo_data}" x="0" y="0" width="320" height="75" preserveAspectRatio="xMinYMin meet" />'
@@ -639,7 +637,6 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
         svg += '<text x="0" y="50" font-size="32" font-weight="900" fill="#eb252d">AD PROJEKSİYON</text>'
     svg += '</g>'
 
-    # Görseldeki gibi sıkı dizilimli ve inceltilmiş (iç yarıçapı 125 olan) SVG parlamentosu
     radii = list(range(125, 245, 10)) 
     sum_radii = sum(radii)
     seats_per_row = [round(total_seats * (r / sum_radii)) for r in radii]
@@ -647,19 +644,15 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
     
     points = sorted([{'x': r * math.cos(math.pi - (math.pi * j) / max(1, (s - 1))), 'y': r * math.sin(math.pi - (math.pi * j) / max(1, (s - 1))), 'angle': math.pi - (math.pi * j) / max(1, (s - 1)), 'r': r} for r, s in zip(radii, seats_per_row) if s > 0 for j in range(s)], key=lambda p: (p['angle'], -p['r']), reverse=True)
 
-    # Grafik sağ sınıra yapışmasın diye translate(960, 930) yerine translate(910, 930) kullanıldı.
     svg += '<g transform="translate(910, 930)">'
     
-    # 1. Önce noktalar çiziliyor
     for i, party in enumerate(assigned_parties):
         if i < len(points): svg += f'<circle cx="{points[i]["x"]}" cy="{-points[i]["y"]}" r="4.3" fill="{party_colors.get(party, "#888")}" />'
     
-    # 2. İnfografikte de Çoğunluk Çizgisi noktalardan sonra çiziliyor
     svg += f'<text x="0" y="-250" text-anchor="middle" font-size="14" font-weight="900" fill="#181720">Çoğunluk</text>'
     svg += f'<line x1="0" y1="-242" x2="0" y2="-122" stroke="#181720" stroke-width="2.5" stroke-dasharray="5,5"/>'
-    
-    # 3. Toplam sayı
     svg += f'<text x="0" y="-12" text-anchor="middle" font-size="44" font-weight="900" fill="#181720">{total_seats}</text></g></svg>'
+    
     return svg
 
 # ==========================================
@@ -667,7 +660,15 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
 # ==========================================
 st.title("AD Türkiye Genel Seçim Projeksiyonu")
 
-custom_start_values = {'AKP': 27.4, 'CHP': 1.0, 'MHP': 5.4, 'DEM': 7.6, 'IYI': 5.1, 'YRP': 3.8, 'ZAFER': 2.9, 'TIP': 1.1, 'YENI': 38.3, 'A': 4.5, 'BBP': 0.9, 'SAADET': 1.1}
+# Hazır senaryolarımızı tanımlıyoruz (İstediğin gibi oranları güncelleyebilirsin)
+PREDEFINED_SCENARIOS = {
+    "2023 Genel Seçim Sonuçları": {'AKP': 35.6, 'CHP': 25.3, 'MHP': 10.1, 'IYI': 9.7, 'DEM': 8.8, 'YRP': 2.8, 'ZAFER': 2.2, 'TIP': 1.8, 'BBP': 1.0, 'SAADET': 0.0, 'YENI': 0.0, 'A': 0.0},
+    "2024 Yerel Seçim Sonuçları": {'AKP': 32.4, 'CHP': 34.5, 'MHP': 6.6, 'IYI': 4.6, 'DEM': 5.8, 'YRP': 7, 'ZAFER': 2.4, 'TIP': 0.6, 'YENI': 0.0, 'A': 0.0},
+    "Anket Delisi Projeksiyon": {'AKP': 27.4, 'CHP': 1.0, 'MHP': 5.4, 'DEM': 7.6, 'IYI': 5.1, 'YRP': 3.8, 'ZAFER': 2.9, 'TIP': 1.1, 'YENI': 38.3, 'A': 4.5, 'BBP': 0.9, 'SAADET': 1.1}
+}
+
+# Sistemi başlatırken varsayılan olarak AD Özel Projeksiyon'u referans al
+custom_start_values = PREDEFINED_SCENARIOS["Anket Delisi Projeksiyon"]
 
 if 'alliance_list' not in st.session_state:
     st.session_state.alliance_list = [{"id": "aly_1", "name": "Cumhur İttifakı", "parties": [p for p in ['AKP', 'MHP', 'BBP'] if p in PARTIES]}, {"id": "aly_2", "name": "Emek ve Özgürlük İttifakı", "parties": [p for p in ['DEM', 'TIP'] if p in PARTIES]}]
@@ -678,13 +679,8 @@ if 'joint_list' not in st.session_state:
     st.session_state.next_jl_id = 1
 
 if 'active_parties' not in st.session_state:
-    # İstenen özel sıralama (Sistemdeki 'ZAFER' ZP olarak kabul edildi)
     ozel_sira = ["AKP", "YENI", "DEM", "MHP", "IYI", "YRP", "A", "ZAFER", "TIP", "SAADET", "BBP", "CHP"]
-    
-    # Önce özel sıradakileri al, listede olmayan başka (sonradan eklenen) parti varsa sonuna ekle
     st.session_state.active_parties = [p for p in ozel_sira if p in PARTIES] + [p for p in PARTIES if p not in ozel_sira]
-
-st.sidebar.header("Ulusal Oy Oranları")
 
 st.sidebar.markdown(f"""
 <style>
@@ -698,17 +694,14 @@ section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]
     border-radius: 0px !important;
     background-color: {sidebar_input_bg} !important;
 }}
-
 /* Tüm Sütunları Dikeyde Tam Ortala (CSS Güvencesi) */
 section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stHorizontalBlock"] {{
     align-items: center !important;
 }}
-
 /* Streamlit'in kendi bıraktığı gereksiz boşlukları sıfırlama */
 section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] .stMarkdown {{
     margin-bottom: 0px !important;
 }}
-
 /* Oy Giriş Kutusu */
 section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] div[data-baseweb="input"] {{
     height: 32px !important;
@@ -717,7 +710,6 @@ section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]
     background-color: #ffffff !important;
     min-width: 55px !important; 
 }}
-
 section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] input {{
     padding: 0px 4px !important;
     font-weight: 900 !important;
@@ -725,73 +717,81 @@ section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]
     font-size: 15px !important;
     text-align: center !important;
 }}
-
-/* Hiza Düzeltmeleri - Hepsi Sabit 32px Yüksekliğe ve Ortalamaya Ayarlandı */
-.party-card-name {{
-    font-weight: 900;
-    font-size: 16px;
-    color: {c_text};
-    white-space: nowrap;
-    overflow: visible;
-    display: flex;
-    align-items: center;
-    height: 32px;
-}}
-
-.party-logo-box {{
-    width: 32px; 
-    height: 32px; 
-    border: 2px solid {c_text}; 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}}
-
-.party-logo-box img {{
-    max-width: 80%;
-    max-height: 80%;
-    object-fit: contain;
-}}
-
-.pct-sign {{
-    font-weight: 900;
-    font-size: 15px;
-    color: {c_text};
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 32px;
-}}
-
-/* Silme Tuşu - CSS ile Doğrudan Hedefleme (Wrapper kullanmadan) */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] button {{
-    background-color: #eb252d !important;
-    color: white !important;
-    border: 2px solid {c_text} !important;
-    padding: 0px !important;
-    height: 32px !important;
-    width: 100% !important;
-    min-width: 32px !important; /* Butonun ezilmesini kesin olarak engeller */
-    box-shadow: 2px 2px 0px {c_text} !important;
-    border-radius: 0px !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}}
-
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] button p {{
-    font-size: 16px !important;
-    margin: 0 !important;
-    line-height: 1 !important;
-}}
-
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] button:hover {{
-    background-color: #181720 !important;
-    transform: translate(2px, 2px);
-    box-shadow: 0px 0px 0px {c_text} !important;
-}}
+/* Hiza Düzeltmeleri */
+.party-card-name {{ font-weight: 900; font-size: 16px; color: {c_text}; white-space: nowrap; overflow: visible; display: flex; align-items: center; height: 32px; }}
+.party-logo-box {{ width: 32px; height: 32px; border: 2px solid {c_text}; display: flex; align-items: center; justify-content: center; }}
+.party-logo-box img {{ max-width: 80%; max-height: 80%; object-fit: contain; }}
+.pct-sign {{ font-weight: 900; font-size: 15px; color: {c_text}; display: flex; align-items: center; justify-content: center; height: 32px; }}
+/* Silme Tuşu */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] button {{ background-color: #eb252d !important; color: white !important; border: 2px solid {c_text} !important; padding: 0px !important; height: 32px !important; width: 100% !important; min-width: 32px !important; box-shadow: 2px 2px 0px {c_text} !important; border-radius: 0px !important; display: flex; align-items: center; justify-content: center; }}
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] button p {{ font-size: 16px !important; margin: 0 !important; line-height: 1 !important; }}
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"] button:hover {{ background-color: #181720 !important; transform: translate(2px, 2px); box-shadow: 0px 0px 0px {c_text} !important; }}
 </style>
 """, unsafe_allow_html=True)
+
+# ----------------------------------------------------
+# BÖLÜM 4.1: SENARYO YÖNETİMİ (İÇE/DIŞA AKTAR)
+# ----------------------------------------------------
+st.sidebar.header("📂 Senaryo Yönetimi")
+
+# 1. Hazır Senaryo Seçici
+selected_scenario = st.sidebar.selectbox("Hazır Senaryo Yükle:", options=["Seçiniz..."] + list(PREDEFINED_SCENARIOS.keys()), key="scenario_selector")
+if selected_scenario != "Seçiniz...":
+    if st.sidebar.button("Yukarıdaki Senaryoyu Uygula", use_container_width=True):
+        for p in PARTIES:
+            if f"inp_{p}" in st.session_state: 
+                del st.session_state[f"inp_{p}"]
+        for p, val in PREDEFINED_SCENARIOS[selected_scenario].items():
+            st.session_state[f"inp_{p}"] = float(val)
+        
+        ozel_sira = ["AKP", "YENI", "DEM", "MHP", "IYI", "YRP", "A", "ZAFER", "TIP", "SAADET", "BBP", "CHP"]
+        st.session_state.active_parties = [p for p in ozel_sira if p in PARTIES] + [p for p in PARTIES if p not in ozel_sira]
+        st.rerun()
+
+# 2. JSON ile İçe / Dışa Aktarma
+with st.sidebar.expander("💾 Veriyi İçe / Dışa Aktar", expanded=False):
+    st.caption("Mevcut partileri, oranları ve ittifakları bilgisayarınıza kaydedin veya daha önce kaydettiğiniz bir senaryoyu yükleyin.")
+    
+    # DIŞA AKTAR
+    export_data = {
+        "active_parties": st.session_state.active_parties,
+        "votes": {p: st.session_state.get(f"inp_{p}", custom_start_values.get(p, float(base_national_dict.get(p, 0.0)))) for p in st.session_state.active_parties},
+        "custom_parties": st.session_state.custom_parties_def,
+        "alliances": st.session_state.alliance_list,
+        "joints": st.session_state.joint_list
+    }
+    json_str = json.dumps(export_data, indent=4)
+    st.download_button("⬇️ Senaryoyu İndir (JSON)", data=json_str, file_name="ad_projeksiyon_senaryo.json", mime="application/json", use_container_width=True)
+    
+    st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
+    
+    # İÇE AKTAR
+    uploaded_file = st.file_uploader("⬆️ Senaryo Yükle (JSON)", type="json")
+    if uploaded_file is not None:
+        if st.button("Yüklenen Dosyayı Uygula", use_container_width=True):
+            try:
+                imported_data = json.load(uploaded_file)
+                st.session_state.active_parties = imported_data.get("active_parties", st.session_state.active_parties)
+                
+                for p, v in imported_data.get("votes", {}).items():
+                    st.session_state[f"inp_{p}"] = float(v)
+                    
+                st.session_state.custom_parties_def = imported_data.get("custom_parties", {})
+                st.session_state.alliance_list = imported_data.get("alliances", [])
+                st.session_state.joint_list = imported_data.get("joints", [])
+                
+                # Yeni ittifaklar eklendiğinde ID çakışması olmaması için sayaçları güncelliyoruz
+                if st.session_state.alliance_list:
+                    st.session_state.next_aly_id = max([int(a['id'].split('_')[1]) for a in st.session_state.alliance_list if '_' in a['id']] + [0]) + 1
+                if st.session_state.joint_list:
+                    st.session_state.next_jl_id = max([int(a['id'].split('_')[1]) for a in st.session_state.joint_list if '_' in a['id']] + [0]) + 1
+                    
+                st.rerun()
+            except Exception as e:
+                st.error("Dosya okunurken hata oluştu! Geçerli bir JSON olduğundan emin olun.")
+
+st.sidebar.divider()
+st.sidebar.header("Ulusal Oy Oranları")
 
 user_inputs = {}
 parties_to_remove = []
@@ -973,9 +973,16 @@ with tab_meclis:
         html_blocks = ["<style>.custom-row { display: flex; align-items: center; margin-bottom: 8px; font-family: 'Space Grotesk', sans-serif; } .custom-party { width: 110px; text-align: right; padding-right: 12px; font-weight: 900; color: " + c_text + "; font-size: 16px; text-transform: uppercase; } .custom-seat { background-color: " + t_seat_bg + "; color: #ffffff !important; font-weight: bold; width: 60px; text-align: center; padding: 4px 0; margin-right: 10px; border: 2px solid " + c_text + "; box-shadow: 3px 3px 0px #eb252d; display: flex; flex-direction: column; justify-content: center; line-height: 1.1; } .seat-num { font-size: 16px; } .seat-delta { font-size: 10.5px; font-weight: 900; } .delta-pos { color: #00E676; } .delta-neg { color: #FF3D00; } .delta-neu { color: #9E9E9E; } .custom-bar-bg { flex-grow: 1; background-color: " + t_bar_bg + "; height: 42px; overflow: hidden; display: flex; border: 2px solid " + c_text + "; box-shadow: 3px 3px 0px #eb252d; } .custom-bar-fill { height: 100%; display: flex; align-items: center; padding-left: 8px; color: #ffffff !important; font-weight: 700; font-size: 14px; white-space: nowrap; border-right: 2px solid " + c_text + "; } .vote-delta { font-size: 11px; margin-left: 6px; font-weight: 400; opacity: 0.9; }</style><div style='max-width: 100%; margin: 10px 0 10px 0;'>"]
         
         for _, row in national_summary_df.iterrows():
+            # --- YENİ EKLENEN KISIM ---
+            # Eğer partinin oy oranı %0 (veya altı) ise bu döngü adımını atla (ekrana basma)
+            if row['Normalize Oy (%)'] <= 0.0:
+                continue
+            # --------------------------
+            
             s_delta_html = f"<span class='seat-delta delta-pos'>▲ {int(row['Vekil Değişimi'])}</span>" if row['Vekil Değişimi'] > 0 else (f"<span class='seat-delta delta-neg'>▼ {abs(int(row['Vekil Değişimi']))}</span>" if row['Vekil Değişimi'] < 0 else "<span class='seat-delta delta-neu'>-</span>")
             v_delta_str = f"(+{row['Oy Değişimi']:.1f})" if row['Oy Değişimi'] > 0 else (f"({row['Oy Değişimi']:.1f})" if row['Oy Değişimi'] < 0 else "")
             html_blocks.append(f"<div class='custom-row'><div class='custom-party'>{row['Parti']}</div><div class='custom-seat'><span class='seat-num'>{int(row['Vekil'])}</span>{s_delta_html}</div><div class='custom-bar-bg'><div class='custom-bar-fill' style='width: {(row['Normalize Oy (%)'] / max_vote_pct) * 100}%; background-color: {party_colors.get(row['Parti'], '#888888')}; min-width: 90px;'>%{row['Normalize Oy (%)']:.1f} <span class='vote-delta'>{v_delta_str}</span></div></div></div>")
+        
         st.markdown("".join(html_blocks) + "</div>", unsafe_allow_html=True)
 
     with col2:
