@@ -769,7 +769,7 @@ st.title("AD Türkiye Genel Seçim Projeksiyonu")
 PREDEFINED_SCENARIOS = {
     "2023 Genel Seçim Sonuçları": {'AKP': 35.6, 'CHP': 25.3, 'MHP': 10.1, 'IYI': 9.7, 'DEM': 8.8, 'YRP': 2.8, 'ZAFER': 2.2, 'TIP': 1.8, 'BBP': 1.0, 'SAADET': 0.0, 'YENI': 0.0, 'A': 0.0},
     "2024 Yerel Seçim Sonuçları": {'AKP': 32.4, 'CHP': 34.5, 'MHP': 6.6, 'IYI': 4.6, 'DEM': 5.8, 'YRP': 7, 'ZAFER': 2.4, 'TIP': 0.6, 'YENI': 0.0, 'A': 0.0},
-    "Anket Delisi Projeksiyon": {'AKP': 27.4, 'CHP': 1.0, 'MHP': 5.4, 'DEM': 7.6, 'IYI': 5.1, 'YRP': 3.8, 'ZAFER': 2.9, 'TIP': 1.1, 'YENI': 38.3, 'A': 4.5, 'BBP': 0.9, 'SAADET': 1.1}
+    "Anket Delisi Projeksiyon": {'AKP': 27.4, 'CHP': 1.0, 'MHP': 6.4, 'DEM': 7.6, 'IYI': 5.1, 'YRP': 3.8, 'ZAFER': 2.9, 'TIP': 1.5, 'YENI': 36.7, 'A': 4.1, 'BBP': 0.9, 'SAADET': 1.2}
 }
 
 custom_start_values = PREDEFINED_SCENARIOS["Anket Delisi Projeksiyon"]
