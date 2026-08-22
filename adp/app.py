@@ -507,7 +507,6 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
 
         def fix_header(m):
             header = m.group(0)
-            
             if 'viewBox' not in header and 'width' in header and 'height' in header:
                 w_m = re.search(r'width=["\']([\d\.]+)px["\']', header)
                 h_m = re.search(r'height=["\']([\d\.]+)px["\']', header)
@@ -526,9 +525,7 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
                     header = header.replace(vb_m.group(0), f'viewBox="{new_vb}"')
 
             header = re.sub(r'\b(width|height|style)=["\'][^"\']*["\']', '', header)
-            
             suffix = ' width="100%" height="100%" overflow="visible" style="max-width: 100%; max-height: 100%; object-fit: contain;" />' if header.endswith('/>') else ' width="100%" height="100%" overflow="visible" style="max-width: 100%; max-height: 100%; object-fit: contain;">'
-            
             return header[:-2] + suffix if header.endswith('/>') else header[:-1] + suffix
 
         svg_content = re.sub(r'<svg\b[^>]*>', fix_header, raw_svg, count=1)
@@ -550,16 +547,12 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
                 is_district = svg_file_name != "turkiye.svg"
                 
                 s_col = "#181720"
-                s_wid = "2.5" if is_district else "8" 
+                s_wid = "3" if is_district else "8" 
                 
                 clean = re.sub(r'\b(style|fill|stroke|stroke-width|stroke-linejoin|class|data-tooltip|data-norm-id)=["\'][^"\']*["\']', '', path_tag, flags=re.IGNORECASE)
                 
-                new_attrs = f'style="fill: {color}; stroke: {s_col}; stroke-width: {s_wid}; stroke-linejoin: round; paint-order: stroke fill;" data-norm-id="{svg_id_norm}"'
-                
-                if tooltip_dict:
-                    tip_raw = tooltip_dict.get(svg_id_norm, f"<b>{id_m.group(2)}</b><br>1. Sırada: {winner}")
-                    tip_safe = tip_raw.replace('"', '&quot;')
-                    new_attrs += f' data-tooltip="{tip_safe}" class="map-path"'
+                # OPTİMİZASYON BURADA: Artık data-tooltip içeriğini buraya gömmüyoruz! Sadece ID veriyoruz.
+                new_attrs = f'style="fill: {color}; stroke: {s_col}; stroke-width: {s_wid}; stroke-linejoin: round; paint-order: stroke fill;" data-norm-id="{svg_id_norm}" class="map-path"'
                 
                 if show_badges and district_seats_data and svg_id_norm not in placed_badges:
                     placed_badges.add(svg_id_norm)
@@ -574,7 +567,6 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
                         man_x, man_y = ALL_PROVINCE_COORDS.get(svg_id_norm, ("", ""))
                         is_metro = any(m in svg_id_norm for m in ['istanbul'])
                         r_val, f_size, y_offset, spacing = ('9.5', '9px', 3, 21) if is_metro else ('15', '16px', 4.5, 32)
-                        
                         cols = 2 if len(sorted_winners) > 2 else len(sorted_winners)
                         rows = (len(sorted_winners) + cols - 1) // cols
                         base_start_y = -((rows - 1) * spacing) / 2
@@ -603,18 +595,27 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
 
         css_style = "<style>body{margin:0;overflow:hidden;background-color:transparent;display:flex;justify-content:center;align-items:center;height:100vh;}.map-container{position:relative;width:100%;height:100%;display:flex;justify-content:center;align-items:center;}svg{max-width:100%;max-height:100%;object-fit:contain;}.map-path{cursor:pointer;transition:opacity 0.2s;}.map-path:hover{opacity:0.8;}#svg-tooltip{position:absolute;display:none;background:white;border:1px solid #ccc;padding:10px 14px;box-shadow:0 4px 15px rgba(0,0,0,0.2);border-radius:6px;pointer-events:none;z-index:9999;font-family:'Segoe UI', Tahoma, sans-serif;font-size:13px;color:#333;min-width:190px;}.tip-header{font-weight:bold;font-size:14px;margin-bottom:6px;border-bottom:1px solid #eee;padding-bottom:4px;color:#111;}.tip-row{display:flex;align-items:center;margin-bottom:3px;}.tip-party{width:80px;font-weight:600;color:#333;}.tip-seat{background:#111;color:#fff;width:24px;text-align:center;font-weight:bold;font-size:11px;margin-right:6px;}.tip-bar-bg{flex-grow:1;background:#eee;height:12px;border-radius:2px;overflow:hidden;}.tip-bar-fill{height:100%;}.tip-pct{margin-left:6px;font-size:11px;color:#666;width:45px;text-align:right;} .badge-group { transition: transform 0.5s ease; }</style>"
         
-        js_script = """
+        # Tooltip Sözlüğünü (Python Dictionary) hafif bir JSON objesine dönüştürüyoruz
+        import json
+        tooltip_json_str = json.dumps(tooltip_dict) if tooltip_dict else "{}"
+
+        js_script = f"""
         <script>
-        document.addEventListener("DOMContentLoaded", function() { 
+        document.addEventListener("DOMContentLoaded", function() {{ 
             const paths = document.querySelectorAll('.map-path'); 
             const tooltip = document.getElementById('svg-tooltip'); 
             const wrapper = document.getElementById('map-wrapper'); 
             
-            paths.forEach(path => { 
-                path.addEventListener('mousemove', (e) => { 
-                    const tooltipData = path.getAttribute('data-tooltip'); 
-                    if(tooltipData) { 
-                        tooltip.innerHTML = tooltipData; 
+            // Python'dan gelen JSON verisini JavaScript'e yüklüyoruz
+            const tooltipDataObj = {tooltip_json_str};
+            
+            paths.forEach(path => {{ 
+                path.addEventListener('mousemove', (e) => {{ 
+                    const normId = path.getAttribute('data-norm-id'); 
+                    const tooltipHtml = tooltipDataObj[normId]; // Veriyi JSON'dan çek!
+                    
+                    if(tooltipHtml) {{ 
+                        tooltip.innerHTML = tooltipHtml; 
                         tooltip.style.display = 'block'; 
                         
                         const rect = wrapper.getBoundingClientRect(); 
@@ -623,41 +624,41 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
                         let x = e.clientX - rect.left + 15; 
                         let y = e.clientY - rect.top + 15; 
                         
-                        if (x + tipRect.width + 15 > rect.width) { x = e.clientX - rect.left - tipRect.width - 15; } 
-                        if (y + tipRect.height + 15 > rect.height) { y = e.clientY - rect.top - tipRect.height - 15; } 
+                        if (x + tipRect.width + 15 > rect.width) {{ x = e.clientX - rect.left - tipRect.width - 15; }} 
+                        if (y + tipRect.height + 15 > rect.height) {{ y = e.clientY - rect.top - tipRect.height - 15; }} 
                         if (x < 10) x = 10;
                         if (y < 10) y = 10;
                         
                         tooltip.style.left = x + 'px'; 
                         tooltip.style.top = y + 'px'; 
-                    } 
-                }); 
+                    }} 
+                }}); 
                 
-                path.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; }); 
-            }); 
+                path.addEventListener('mouseleave', () => {{ tooltip.style.display = 'none'; }}); 
+            }}); 
             
-            setTimeout(() => { 
+            setTimeout(() => {{ 
                 const badgeGroups = document.querySelectorAll('.badge-group'); 
-                badgeGroups.forEach(bg => { 
+                badgeGroups.forEach(bg => {{ 
                     const manualX = bg.getAttribute('data-manual-x'); 
                     const manualY = bg.getAttribute('data-manual-y'); 
-                    if (manualX && manualY) { 
-                        bg.setAttribute('transform', `translate(${manualX}, ${manualY})`); 
-                    } else { 
+                    if (manualX && manualY) {{ 
+                        bg.setAttribute('transform', `translate(${{manualX}}, ${{manualY}})`); 
+                    }} else {{ 
                         const pathId = bg.getAttribute('data-path-id'); 
-                        const targetPath = document.querySelector(`.map-path[data-norm-id="${pathId}"]`); 
-                        if (targetPath) { 
+                        const targetPath = document.querySelector(`.map-path[data-norm-id="${{pathId}}"]`); 
+                        if (targetPath) {{ 
                             const bbox = targetPath.getBBox(); 
-                            if(bbox.width > 0 && bbox.height > 0) { 
+                            if(bbox.width > 0 && bbox.height > 0) {{ 
                                 const centerX = bbox.x + (bbox.width / 2); 
                                 const centerY = bbox.y + (bbox.height / 2); 
-                                bg.setAttribute('transform', `translate(${centerX}, ${centerY})`); 
-                            } 
-                        } 
-                    } 
-                }); 
-            }, 100); 
-        });
+                                bg.setAttribute('transform', `translate(${{centerX}}, ${{centerY}})`); 
+                            }} 
+                        }} 
+                    }} 
+                }}); 
+            }}, 100); 
+        }});
         </script>
         """
 
