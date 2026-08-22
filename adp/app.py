@@ -550,7 +550,7 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
                 is_district = svg_file_name != "turkiye.svg"
                 
                 s_col = "#181720"
-                s_wid = "3" if is_district else "8" 
+                s_wid = "2.5" if is_district else "8" 
                 
                 clean = re.sub(r'\b(style|fill|stroke|stroke-width|stroke-linejoin|class|data-tooltip|data-norm-id)=["\'][^"\']*["\']', '', path_tag, flags=re.IGNORECASE)
                 
@@ -740,14 +740,14 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
     
     return svg
 
-def generate_regional_infographic_svg(province_name, top_5_df, map_svg_str, party_colors):
+def generate_regional_infographic_svg(province_name, top_parties_df, map_svg_str, party_colors):
     svg = '<svg width="1200" height="980" viewBox="0 0 1200 980" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background-color: white; font-family: \'Space Grotesk\', sans-serif;">'
     svg += '<rect width="100%" height="100%" fill="#ffffff" />'
     
     card_size = 80
     card_spacing = 22
     
-    sorted_party_rows = [row for row in top_5_df.itertuples()]
+    sorted_party_rows = [row for row in top_parties_df.itertuples()]
     start_x = (1200 - (len(sorted_party_rows) * card_size + (len(sorted_party_rows) - 1) * card_spacing)) / 2
 
     svg += f'<text x="600" y="30" text-anchor="middle" font-size="20" font-weight="900" fill="#181720" letter-spacing="1px">{province_name} İLİ SEÇİM SONUÇLARI</text>'
@@ -771,7 +771,6 @@ def generate_regional_infographic_svg(province_name, top_5_df, map_svg_str, part
         svg += f'<text x="{cx + card_size/2}" y="160" text-anchor="middle" fill="#181720" font-weight="900" font-size="24">{seats}</text>'
         svg += f'<text x="{cx + card_size/2}" y="180" text-anchor="middle" fill="#666666" font-weight="700" font-size="13">% {vote_pct:.2f}</text>'
 
-    # İlçe haritasını ortaya devasa boyutta ve net bir şekilde yerleştiriyoruz
     map_svg_clean = re.sub(r"<\?xml.*?\?>", "", map_svg_str)
     svg += f'<svg x="20" y="210" width="1160" height="630">{map_svg_clean}</svg>'
     
@@ -1362,7 +1361,10 @@ with tab_meclis:
         dl_name = "turkiye_secim_infografik.png"
     else:
         display_header = master_region.replace('i', 'İ').upper()
-        top_5_df = prov_summary_bar.head(5) 
+        
+        top_5 = prov_summary_bar.head(5) 
+        winners = prov_summary_bar[prov_summary_bar['seats_won'] > 0]
+        top_parties_df = pd.concat([top_5, winners]).drop_duplicates(subset=['party']).sort_values(by=['new_vote_pct', 'seats_won'], ascending=[False, False])
         
         regional_map_svg = render_colored_svg(
             prov_winners_dict, 
@@ -1375,7 +1377,7 @@ with tab_meclis:
             custom_colors=custom_heatmap_colors
         )
         
-        final_svg = generate_regional_infographic_svg(display_header, top_5_df, regional_map_svg, party_colors)
+        final_svg = generate_regional_infographic_svg(display_header, top_parties_df, regional_map_svg, party_colors)
         
         btn_text = f"📸 {display_header} İnfografiğini PNG Olarak İndir"
         dl_name = f"{selected_norm}_secim_infografik.png"
