@@ -42,7 +42,7 @@ sidebar_input_border = "#444444"
 st.markdown(
     """
     <meta name="description" content="Türkiye genel seçim ve cumhurbaşkanlığı seçim simülasyonu. İlçe bazlı interaktif seçim haritası, D'Hondt hesaplama makinesi ve güncel anket projeksiyon aracı.">
-    <meta name="keywords" content="seçim simülasyonu, türkiye seçim haritası, d'hondt hesaplama, anket analizi, poliwave, seçim projeksiyonu, oy kayması, meclis oy dağılımı">
+    <meta name="keywords" content="seçim simülasyonu, türkiye seçim haritası, d'hondt hesaplama, anket analizi, poliwave, seçim projeksiyonu, oy kayması, meclis oy dağılımı, pgm projeksiyon, gündemar, projeksiyon">
     """,
     unsafe_allow_html=True
 )
@@ -813,7 +813,7 @@ with st.sidebar.expander("📌 Proje Hakkında", expanded=False):
     st.markdown("""
     **AD Projeksiyon**, Türkiye genel seçimleri ve cumhurbaşkanlığı seçimleri için geliştirilmiş gelişmiş bir veri analizi ve simülasyon aracıdır. 
     
-    Log-odds ve geometrik ortalama (Poliwave) tabanlı algoritmalarla ilçe bazlı **oy kayması (swing)** hesaplar, **D'Hondt sistemi** ile milletvekili dağılımını yansıtır ve sonuçları Neobrutalist interaktif haritalara döker.
+    Log-odds ve geometrik ortalama tabanlı algoritmalarla ilçe bazlı **oy kayması (swing)** hesaplar, **D'Hondt sistemi** ile milletvekili dağılımını yansıtır ve sonuçları interaktif haritalara döker.
     """)
 
 st.sidebar.markdown(f"""
