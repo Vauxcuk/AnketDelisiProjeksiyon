@@ -281,7 +281,7 @@ df_base, base_national_dict = apply_custom_parties(raw_df, st.session_state.cust
 PARTIES = list(DEFAULT_TRANSITIONS.keys()) + list(st.session_state.custom_parties_def.keys())
 
 party_colors = {
-    'AKP': '#FDA000', 'CHP': '#c80814', 'MHP': '#137BBB', 'DEM': '#90268F', 
+    'AKP': '#FDA000', 'CHP': '#d33943', 'MHP': '#137BBB', 'DEM': '#90268F', 
     'IYI': '#63bbed', 'YRP': '#009840', 'TIP': '#FF1D25', 'ZAFER': '#474647', 
     'BBP': '#824d5d', 'SAADET': '#ff2e84', 'YENI': '#A7050E', 'A': '#20379f'
 }
