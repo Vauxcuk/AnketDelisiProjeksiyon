@@ -1477,8 +1477,10 @@ with tab_meclis:
     else:
         display_header = master_region.replace('i', 'İ').upper()
         
-        top_5 = prov_summary_bar.head(5) 
-        winners = prov_summary_bar[prov_summary_bar['seats_won'] > 0]
+        active_prov = prov_summary_bar[(prov_summary_bar['new_vote_pct'] > 0) | (prov_summary_bar['seats_won'] > 0)]
+        
+        top_5 = active_prov.head(5) 
+        winners = active_prov[active_prov['seats_won'] > 0]
         top_parties_df = pd.concat([top_5, winners]).drop_duplicates(subset=['party']).sort_values(by=['new_vote_pct', 'seats_won'], ascending=[False, False])
         
         regional_map_svg = render_colored_svg(
@@ -1593,9 +1595,7 @@ with tab_meclis:
                 for _, row in swing_df[swing_df['Durum'].str.contains('Riskli')].sort_values(by='Fark Skoru').head(10).iterrows(): st.warning(f"**{row['İlçe']}** ⚔️ Rakip: {row['Rakip']}  \n*{row['Açıklama']}*")
 
 with tab_cb:
-    # ==========================================
-    # --- 🗳️ 6. Cumhurbaşkanlığı Simülasyonu ---
-    # ==========================================
+    # Cumhurbaşkanlığı Simülasyonu
     st.header("🗳️ CUMHURBAŞKANLIĞI SEÇİMİ PROJEKSİYONU")
     cb_parties = [p for p in PARTIES if display_user_nat.get(p, 0) > 0.0]
 
@@ -1865,7 +1865,7 @@ with tab_cb:
                 
                 with st.container():
                     top_col1_2, top_col2_2 = st.columns([4, 1])
-                    with top_col1_2: st.markdown("<p style='font-size:12px; color:#888; margin-bottom:10px;'>2. Tur adaylarının partilerden alacağı oy oranlarını (%) aşağıdaki kartlardan düzenleyin:</p>", unsafe_allow_html=True)
+                    with top_col1_2: st.markdown("<p style='font-size:12px; color:#888; margin-bottom:10px;'>2. Tur adaylarının partilerden alacağı oy oranlarını (%) aşağıdaki kartlardan düzenleyin <br><b>(1. Adayın oyunu girdiğinizde, 2. Adayın oyu 100'e tamamlanacak şekilde otomatik belirlenir)</b>:</p>", unsafe_allow_html=True)
                     with top_col2_2:
                         if st.button("🔄 Sıfırla", key="reset_cands_2", help="Oyları 1. turdaki dağılıma geri döndür"):
                             st.session_state.cb_cands_2 = [
@@ -1884,7 +1884,18 @@ with tab_cb:
                             for i, p in enumerate(cb_parties):
                                 p_vote = display_user_nat.get(p, 0.0)
                                 cols2[i % 4].markdown(f"<div style='font-size:10px; font-weight:900; color:{party_colors.get(p, '#888')}; margin-bottom:-5px;'>{p} <span style='color:#999; font-weight:500;'>(%{p_vote:.1f})</span></div>", unsafe_allow_html=True)
-                                cand["votes"][p] = cols2[i % 4].number_input(f"c2_v_{idx}_{p}", value=float(cand["votes"].get(p, 0.0)), min_value=0.0, max_value=100.0, label_visibility="collapsed", key=f"c2_v_inp_{idx}_{p}")
+                                
+                                if idx == 0:
+                                    cand["votes"][p] = cols2[i % 4].number_input(f"c2_v_{idx}_{p}", value=float(cand["votes"].get(p, 0.0)), min_value=0.0, max_value=100.0, label_visibility="collapsed", key=f"c2_v_inp_{idx}_{p}")
+                                else:
+                                    # 2. Aday: 100'e tamamla ve arayüzü zorla güncelle
+                                    val_1 = st.session_state.cb_cands_2[0]["votes"].get(p, 0.0)
+                                    val_2 = max(0.0, 100.0 - val_1)
+                                    cand["votes"][p] = val_2 
+                                    
+                                    st.session_state[f"c2_v_inp_{idx}_{p}"] = float(val_2) 
+                                    
+                                    cols2[i % 4].number_input(f"c2_v_{idx}_{p}", value=float(val_2), min_value=0.0, max_value=100.0, label_visibility="collapsed", disabled=True, key=f"c2_v_inp_{idx}_{p}")
 
                 if st.button("🏆 2. Tur Sonuçlarını & Haritasını Hesapla", type="primary", use_container_width=True) or ('cb_res_2_saved' in st.session_state):
                     st.session_state.cb_res_2_saved = True
