@@ -934,6 +934,28 @@ st.sidebar.info(f"Geçerli Taban: **%{weight_23_input:.1f}** (2023) + **%{weight
 st.sidebar.divider()
 st.sidebar.header("Ulusal Oy Oranları")
 
+current_total = sum([st.session_state.get(f"inp_{p}", custom_start_values.get(p, float(base_national_dict.get(p, 0.0)))) for p in st.session_state.active_parties])
+kalan_oy = max(0.0, 100.0 - current_total)
+fazla_oy = max(0.0, current_total - 100.0)
+
+total_color = "#00E676" if current_total <= 100.0 else "#eb252d"
+alt_text_label = "Kalan Oy" if current_total <= 100.0 else "Fazla Oy (Otomatik İndirilecek)"
+alt_text_val = f"%{kalan_oy:.1f}" if current_total <= 100.0 else f"%{fazla_oy:.1f}"
+
+st.sidebar.markdown(f"""
+<div style="background-color: {sidebar_input_bg}; border: 2px solid {c_text}; box-shadow: 3px 3px 0px #eb252d; padding: 10px 15px; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <span style="font-weight: 900; font-size: 15px; color: {c_text}; text-transform: uppercase;">Toplam Oy</span>
+        <span style="font-weight: 900; font-size: 18px; color: {total_color};">% {current_total:.1f}</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 700; font-size: 11px; color: #888888; text-transform: uppercase;">{alt_text_label}</span>
+        <span style="font-weight: 700; font-size: 13px; color: #888888;">{alt_text_val}</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+# --------------------------------------------------------
+
 user_inputs = {}
 parties_to_remove = []
 
@@ -1078,7 +1100,6 @@ with st.sidebar.expander("📌 Proje Hakkında", expanded=False):
 params = st.session_state.calc_params
 p_threshold = params["threshold_input"]
 total_input = sum(params["user_inputs"].values())
-if abs(total_input - 100.0) > 0.1: st.sidebar.warning(f"Simülasyondaki toplam oy %{total_input:.1f}. Oylar %100'e normalize ediliyor.")
 user_inputs_norm = {p: (v / total_input) * 100 if total_input > 0 else 0 for p, v in params["user_inputs"].items()}
 
 alliances = {aly['name']: aly['parties'] for aly in params["alliance_list"] if aly['name'].strip() and aly['parties']}
@@ -1484,7 +1505,9 @@ with tab_meclis:
                 for _, row in swing_df[swing_df['Durum'].str.contains('Riskli')].sort_values(by='Fark Skoru').head(10).iterrows(): st.warning(f"**{row['İlçe']}** ⚔️ Rakip: {row['Rakip']}  \n*{row['Açıklama']}*")
 
 with tab_cb:
-    # Cumhurbaşkanlığı Simülasyonu
+    # ==========================================
+    # --- 🗳️ 6. Cumhurbaşkanlığı Simülasyonu ---
+    # ==========================================
     st.header("🗳️ CUMHURBAŞKANLIĞI SEÇİMİ PROJEKSİYONU")
     cb_parties = [p for p in PARTIES if display_user_nat.get(p, 0) > 0.0]
 
@@ -1529,7 +1552,9 @@ with tab_cb:
                 
                 cols = st.columns(4)
                 for i, p in enumerate(cb_parties):
-                    cols[i % 4].markdown(f"<div style='font-size:10px; font-weight:900; color:{party_colors.get(p, '#888')}; margin-bottom:-5px;'>{p}</div>", unsafe_allow_html=True)
+                    # PARTİNİN GÜNCEL OYUNU ÇEKİYORUZ VE ETİKETE YAZDIRIYORUZ
+                    p_vote = display_user_nat.get(p, 0.0)
+                    cols[i % 4].markdown(f"<div style='font-size:10px; font-weight:900; color:{party_colors.get(p, '#888')}; margin-bottom:-5px;'>{p} <span style='color:#999; font-weight:500;'>(%{p_vote:.1f})</span></div>", unsafe_allow_html=True)
                     cand["votes"][p] = cols[i % 4].number_input(f"v_{c_id}_{p}", value=float(cand["votes"].get(p, 0.0)), min_value=0.0, max_value=100.0, label_visibility="collapsed", key=f"c1_v_{c_id}_{p}")
 
                 col_del.markdown("<br>", unsafe_allow_html=True)
@@ -1546,6 +1571,7 @@ with tab_cb:
             st.session_state.next_c1_id += 1
             st.rerun()
 
+    # --- AKILLI RENK ÇÖZÜMLEYİCİ ---
     @st.cache_data(show_spinner=False)
     def calculate_cb_votes_and_colors(cands_state_list, cb_parties_list, display_user_nat_dict, party_colors_dict):
         cand_data = []
@@ -1582,6 +1608,7 @@ with tab_cb:
             
         return cb_res, cand_color_map
 
+    # --- İLÇE DETAY MOTORU ---
     @st.cache_data(show_spinner=False)
     def calculate_cb_district_results(cands_list, df_results_data, colors_override, cb_parties_list):
         pivot_dist_votes = df_results_data.pivot(index='district', columns='party', values='new_vote_pct').fillna(0)
@@ -1687,15 +1714,27 @@ with tab_cb:
                     ]
                 
                 with st.container():
-                    col_baslik2 = st.columns([2.5] + [1]*len(cb_parties))
-                    col_baslik2[0].markdown("<div style='font-weight:900; color:#888; font-size:14px; margin-top:10px;'>ADAY ADI</div>", unsafe_allow_html=True)
-                    for i, p in enumerate(cb_parties): col_baslik2[i+1].markdown(f"<div style='text-align:center; font-weight:900; color:{party_colors.get(p, c_text)}; font-size:15px; margin-top:10px;'>{p}</div>", unsafe_allow_html=True)
-                    st.markdown("<hr style='margin: 10px 0; border-width: 2px;'>", unsafe_allow_html=True)
-                    
+                    top_col1_2, top_col2_2 = st.columns([4, 1])
+                    with top_col1_2: st.markdown("<p style='font-size:12px; color:#888; margin-bottom:10px;'>2. Tur adaylarının partilerden alacağı oy oranlarını (%) aşağıdaki kartlardan düzenleyin:</p>", unsafe_allow_html=True)
+                    with top_col2_2:
+                        if st.button("🔄 Sıfırla", key="reset_cands_2", help="Oyları 1. turdaki dağılıma geri döndür"):
+                            st.session_state.cb_cands_2 = [
+                                {"name": top1, "votes": copy.deepcopy(next((c["votes"] for c in st.session_state.cb_cands_1 if c["name"] == top1), {p: 0 for p in cb_parties}))},
+                                {"name": top2, "votes": copy.deepcopy(next((c["votes"] for c in st.session_state.cb_cands_1 if c["name"] == top2), {p: 0 for p in cb_parties}))}
+                            ]
+                            st.rerun()
+
                     for idx, cand in enumerate(st.session_state.cb_cands_2):
-                        r_cols = st.columns([2.5] + [1]*len(cb_parties))
-                        r_cols[0].markdown(f"**{cand['name']}**")
-                        for i, p in enumerate(cb_parties): cand["votes"][p] = r_cols[i+1].number_input(f"{p}_{idx}_2", value=float(cand["votes"].get(p, 0.0)), min_value=0.0, max_value=100.0, label_visibility="collapsed", key=f"c2_v_{idx}_{p}")
+                        with st.container(border=True):
+                            col_name2, col_empty2 = st.columns([5, 1])
+                            cand["name"] = col_name2.text_input(f"Aday Adı {idx}", value=cand["name"], key=f"c2_n_{idx}", label_visibility="collapsed", disabled=True)
+                            st.markdown("<div style='font-size: 11px; font-weight: bold; margin: 10px 0 5px 0;'>Parti Oy Oranları (%)</div>", unsafe_allow_html=True)
+                            
+                            cols2 = st.columns(4)
+                            for i, p in enumerate(cb_parties):
+                                p_vote = display_user_nat.get(p, 0.0)
+                                cols2[i % 4].markdown(f"<div style='font-size:10px; font-weight:900; color:{party_colors.get(p, '#888')}; margin-bottom:-5px;'>{p} <span style='color:#999; font-weight:500;'>(%{p_vote:.1f})</span></div>", unsafe_allow_html=True)
+                                cand["votes"][p] = cols2[i % 4].number_input(f"c2_v_{idx}_{p}", value=float(cand["votes"].get(p, 0.0)), min_value=0.0, max_value=100.0, label_visibility="collapsed", key=f"c2_v_inp_{idx}_{p}")
 
                 if st.button("🏆 2. Tur Sonuçlarını & Haritasını Hesapla", type="primary", use_container_width=True) or ('cb_res_2_saved' in st.session_state):
                     st.session_state.cb_res_2_saved = True
@@ -1741,7 +1780,8 @@ with tab_cb:
                                 st.markdown("<div class='cb-card'>" + "".join([f"<div class='cb-row'><div class='cb-name'>{aday}</div><div class='cb-bar-bg'><div class='cb-bar-fill' style='width: {((pct / max_cb_pct2) * 100) if max_cb_pct2 > 0 else 0}%; background-color: {cand_color_map_2.get(aday, '#888888')}; min-width: 60px;'>%{pct:.2f}</div></div></div>" for aday, pct in bar_data_2]) + "</div>", unsafe_allow_html=True)
                                 
                                 sorted_2_nat = sorted(cb_res_2.items(), key=lambda x: x[1], reverse=True)
-                                st.success(f"🇹🇷 Türkiye'nin Cumhurbaşkanı: **{sorted_2_nat[0][0]}** (%{ (sorted_2_nat[0][1]/total_cb_2)*100:.2f})")                                
+                                st.success(f"🇹🇷 Türkiye'nin Cumhurbaşkanı: **{sorted_2_nat[0][0]}** (%{ (sorted_2_nat[0][1]/total_cb_2)*100:.2f})")
+
 #FOOTER
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("---")
