@@ -636,7 +636,7 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
             all_badges = '<g id="district-badges">' + "".join(badges_elements) + '</g>'
             svg_content = svg_content.replace('</svg>', f'{all_badges}</svg>')
 
-        css_style = "<style>body{margin:0;overflow:hidden;background-color:transparent;display:flex;justify-content:center;align-items:center;height:100vh;}.map-container{position:relative;width:100%;height:100%;display:flex;justify-content:center;align-items:center;}svg{max-width:100%;max-height:100%;object-fit:contain;}.map-path{cursor:pointer;transition:opacity 0.2s;}.map-path:hover{opacity:0.8;}#svg-tooltip{position:absolute;display:none;background:white;border:1px solid #ccc;padding:10px 14px;box-shadow:0 4px 15px rgba(0,0,0,0.2);border-radius:6px;pointer-events:none;z-index:9999;font-family:'Segoe UI', Tahoma, sans-serif;font-size:13px;color:#333;min-width:190px;}.tip-header{font-weight:bold;font-size:14px;margin-bottom:6px;border-bottom:1px solid #eee;padding-bottom:4px;color:#111;}.tip-row{display:flex;align-items:center;margin-bottom:3px;}.tip-party{width:80px;font-weight:600;color:#333;}.tip-seat{background:#111;color:#fff;width:24px;text-align:center;font-weight:bold;font-size:11px;margin-right:6px;}.tip-bar-bg{flex-grow:1;background:#eee;height:12px;border-radius:2px;overflow:hidden;}.tip-bar-fill{height:100%;}.tip-pct{margin-left:6px;font-size:11px;color:#666;width:45px;text-align:right;} .badge-group { transition: transform 0.5s ease; }</style>"
+        css_style = "<meta name='color-scheme' content='light only'><style>:root{color-scheme: light only !important;} body{margin:0;overflow:hidden;background-color:transparent;display:flex;justify-content:center;align-items:center;height:100vh;}.map-container{position:relative;width:100%;height:100%;display:flex;justify-content:center;align-items:center;}svg{max-width:100%;max-height:100%;object-fit:contain; color-scheme: light only;}.map-path{cursor:pointer;transition:opacity 0.2s;}.map-path:hover{opacity:0.8;}#svg-tooltip{position:absolute;display:none;background:#fffffe;border:1px solid #ccc;padding:10px 14px;box-shadow:0 4px 15px rgba(0,0,0,0.2);border-radius:6px;pointer-events:none;z-index:9999;font-family:'Segoe UI', Tahoma, sans-serif;font-size:13px;color:#333;min-width:190px;}.tip-header{font-weight:bold;font-size:14px;margin-bottom:6px;border-bottom:1px solid #eee;padding-bottom:4px;color:#111;}.tip-row{display:flex;align-items:center;margin-bottom:3px;}.tip-party{width:80px;font-weight:600;color:#333;}.tip-seat{background:#111;color:#fffffe;width:24px;text-align:center;font-weight:bold;font-size:11px;margin-right:6px;}.tip-bar-bg{flex-grow:1;background:#eee;height:12px;border-radius:2px;overflow:hidden;}.tip-bar-fill{height:100%;}.tip-pct{margin-left:6px;font-size:11px;color:#666;width:45px;text-align:right;} .badge-group { transition: transform 0.5s ease; }</style>"
         
         # Tooltip Sözlüğünü (Python Dictionary) hafif bir JSON objesine dönüştürüyoruz
         import json
@@ -712,9 +712,10 @@ def render_colored_svg(prov_winners, dist_winners, colors_dict, tooltip_dict, di
         return f"<div style='color:red;'>SVG Hatası: {str(e)}</div>"
 
 # İnfografik
+# --- 1. TÜRKİYE GENELİ İNFOGRAFİK ---
 def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assigned_parties, party_colors, alliances_dict):
-    svg = '<svg width="1200" height="980" viewBox="0 0 1200 980" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background-color: white; font-family: \'Space Grotesk\', sans-serif;">'
-    svg += '<rect width="100%" height="100%" fill="#ffffff" />'
+    svg = '<svg width="1200" height="980" viewBox="0 0 1200 980" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background-color: #fffffe; font-family: \'Space Grotesk\', sans-serif;">'
+    svg += '<rect width="100%" height="100%" fill="#fffffe" />'
 
     party_to_aly = {p: aly for aly, pts in alliances_dict.items() for p in pts}
     winning_df = national_summary_df[national_summary_df['Vekil'] > 0].copy()
@@ -741,7 +742,9 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
 
     for aly_name, s_idx, e_idx in block_spans:
         bx1, bx2 = start_x + s_idx * (card_size + card_spacing), start_x + e_idx * (card_size + card_spacing) + card_size
-        svg += f'<line x1="{bx1}" y1="36" x2="{bx2}" y2="36" stroke="#181720" stroke-width="2.5"/><text x="{(bx1 + bx2)/2}" y="25" text-anchor="middle" font-size="12" font-weight="900" fill="#181720">{aly_name}</text>'
+        display_aly = aly_name.replace(" İttifakı", " İtt.") if (e_idx - s_idx == 0 and len(aly_name) > 15) else aly_name
+        f_size = "10" if len(display_aly) > 15 else "12"
+        svg += f'<line x1="{bx1}" y1="36" x2="{bx2}" y2="36" stroke="#181720" stroke-width="2.5"/><text x="{(bx1 + bx2)/2}" y="25" text-anchor="middle" font-size="{f_size}" font-weight="900" fill="#181720">{display_aly}</text>'
 
     for idx, row in enumerate(sorted_party_rows):
         p_name, seats, vote = row['Parti'], int(row['Vekil']), float(row['Normalize Oy (%)'])
@@ -752,12 +755,13 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
         if logo_data:
             svg += f'<image href="{logo_data}" x="{cx + 10}" y="{62}" width="{card_size - 20}" height="{card_size - 20}" preserveAspectRatio="xMidYMid meet" />'
         else:
-            svg += f'<text x="{cx + card_size/2}" y="{52 + card_size/2 + 7}" text-anchor="middle" fill="#ffffff" font-weight="900" font-size="18">{p_name}</text>'
+            svg += f'<text x="{cx + card_size/2}" y="{52 + card_size/2 + 7}" text-anchor="middle" fill="#fffffe" font-weight="900" font-size="18">{p_name}</text>'
         svg += f'<text x="{cx + card_size/2}" y="160" text-anchor="middle" fill="#181720" font-weight="900" font-size="24">{seats}</text><text x="{cx + card_size/2}" y="180" text-anchor="middle" fill="#666666" font-weight="700" font-size="13">% {vote:.2f}</text>'
 
     map_svg_clean = re.sub(r"<\?xml.*?\?>", "", map_svg_str)
     svg += f'<svg x="30" y="195" width="1120" height="520">{map_svg_clean}</svg>'
 
+    import os
     main_logo_data = get_svg_file_base64(os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.svg"))
     svg += '<g transform="translate(30, 870)">'
     if main_logo_data:
@@ -774,7 +778,6 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
     points = sorted([{'x': r * math.cos(math.pi - (math.pi * j) / max(1, (s - 1))), 'y': r * math.sin(math.pi - (math.pi * j) / max(1, (s - 1))), 'angle': math.pi - (math.pi * j) / max(1, (s - 1)), 'r': r} for r, s in zip(radii, seats_per_row) if s > 0 for j in range(s)], key=lambda p: (p['angle'], -p['r']), reverse=True)
 
     svg += '<g transform="translate(910, 930)">'
-    
     for i, party in enumerate(assigned_parties):
         if i < len(points): svg += f'<circle cx="{points[i]["x"]}" cy="{-points[i]["y"]}" r="4.3" fill="{party_colors.get(party, "#888")}" />'
     
@@ -784,9 +787,10 @@ def generate_infographic_svg(national_summary_df, map_svg_str, total_seats, assi
     
     return svg
 
+# --- 2. BÖLGESEL (İL) İNFOGRAFİK ---
 def generate_regional_infographic_svg(province_name, top_parties_df, map_svg_str, party_colors):
-    svg = '<svg width="1200" height="980" viewBox="0 0 1200 980" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background-color: white; font-family: \'Space Grotesk\', sans-serif;">'
-    svg += '<rect width="100%" height="100%" fill="#ffffff" />'
+    svg = '<svg width="1200" height="980" viewBox="0 0 1200 980" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background-color: #fffffe; font-family: \'Space Grotesk\', sans-serif;">'
+    svg += '<rect width="100%" height="100%" fill="#fffffe" />'
     
     card_size = 80
     card_spacing = 22
@@ -810,55 +814,11 @@ def generate_regional_infographic_svg(province_name, top_parties_df, map_svg_str
         if logo_data:
             svg += f'<image href="{logo_data}" x="{cx + 10}" y="{62}" width="{card_size - 20}" height="{card_size - 20}" preserveAspectRatio="xMidYMid meet" />'
         else:
-            svg += f'<text x="{cx + card_size/2}" y="{52 + card_size/2 + 7}" text-anchor="middle" fill="#ffffff" font-weight="900" font-size="18">{p_name}</text>'
+            svg += f'<text x="{cx + card_size/2}" y="{52 + card_size/2 + 7}" text-anchor="middle" fill="#fffffe" font-weight="900" font-size="18">{p_name}</text>'
         
         svg += f'<text x="{cx + card_size/2}" y="160" text-anchor="middle" fill="#181720" font-weight="900" font-size="24">{seats}</text>'
         svg += f'<text x="{cx + card_size/2}" y="180" text-anchor="middle" fill="#666666" font-weight="700" font-size="13">% {vote_pct:.2f}</text>'
 
-    map_svg_clean = re.sub(r"<\?xml.*?\?>", "", map_svg_str)
-    svg += f'<svg x="20" y="210" width="1160" height="630">{map_svg_clean}</svg>'
-    
-    main_logo_data = get_svg_file_base64(os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.svg"))
-    svg += '<g transform="translate(30, 880)">'
-    if main_logo_data:
-        svg += f'<image href="{main_logo_data}" x="0" y="0" width="320" height="75" preserveAspectRatio="xMinYMin meet" />'
-    else:
-        svg += '<text x="0" y="50" font-size="32" font-weight="900" fill="#eb252d">AD PROJEKSİYON</text>'
-    svg += '</g>'
-        
-    svg += '</svg>'
-    return svg
-
-def generate_cb_infographic_svg(title, cands_data, map_svg_str, cand_colors):
-    svg = '<svg width="1200" height="980" viewBox="0 0 1200 980" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background-color: white; font-family: \'Space Grotesk\', sans-serif;">'
-    svg += '<rect width="100%" height="100%" fill="#ffffff" />'
-    
-    card_width = 170
-    card_height = 65
-    card_spacing = 25
-    
-    top_cands = sorted(cands_data, key=lambda x: x[1], reverse=True)[:5]
-    top_cands = [c for c in top_cands if c[1] > 0]
-    
-    start_x = (1200 - (len(top_cands) * card_width + (len(top_cands) - 1) * card_spacing)) / 2
-
-    svg += f'<text x="600" y="45" text-anchor="middle" font-size="24" font-weight="900" fill="#181720" letter-spacing="1px">{title}</text>'
-    
-    for idx, (cand_name, pct) in enumerate(top_cands):
-        color = cand_colors.get(cand_name, '#888888')
-        cx = start_x + idx * (card_width + card_spacing)
-        
-        # Neobrutalist Dikdörtgen Aday Kartları
-        svg += f'<rect x="{cx + 5}" y="75" width="{card_width}" height="{card_height}" fill="#181720" rx="4"/>'
-        svg += f'<rect x="{cx}" y="70" width="{card_width}" height="{card_height}" fill="{color}" stroke="#181720" stroke-width="3" rx="4"/>'
-        
-        cand_short = str(cand_name).split(' ')[-1].upper()
-        if len(cand_short) > 15: cand_short = cand_short[:14] + "."
-        
-        svg += f'<text x="{cx + card_width/2}" y="{70 + card_height/2 + 6}" text-anchor="middle" fill="#ffffff" font-weight="900" font-size="18">{cand_short}</text>'
-        svg += f'<text x="{cx + card_width/2}" y="180" text-anchor="middle" fill="#181720" font-weight="900" font-size="28">% {pct:.2f}</text>'
-
-    # Harita yerleşimi
     map_svg_clean = re.sub(r"<\?xml.*?\?>", "", map_svg_str)
     svg += f'<svg x="20" y="210" width="1160" height="630">{map_svg_clean}</svg>'
     
@@ -869,9 +829,48 @@ def generate_cb_infographic_svg(title, cands_data, map_svg_str, cand_colors):
         svg += f'<image href="{main_logo_data}" x="0" y="0" width="320" height="75" preserveAspectRatio="xMinYMin meet" />'
     else:
         svg += '<text x="0" y="50" font-size="32" font-weight="900" fill="#eb252d">AD PROJEKSİYON</text>'
-    svg += '</g>'
+    svg += '</g></svg>'
+    return svg
+
+# --- 3. CUMHURBAŞKANLIĞI İNFOGRAFİK ---
+def generate_cb_infographic_svg(title, cands_data, map_svg_str, cand_colors):
+    svg = '<svg width="1200" height="980" viewBox="0 0 1200 980" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background-color: #fffffe; font-family: \'Space Grotesk\', sans-serif;">'
+    svg += '<rect width="100%" height="100%" fill="#fffffe" />'
+    
+    card_width = 170
+    card_height = 65
+    card_spacing = 25
+    
+    top_cands = sorted(cands_data, key=lambda x: x[1], reverse=True)[:5]
+    top_cands = [c for c in top_cands if c[1] > 0]
+    start_x = (1200 - (len(top_cands) * card_width + (len(top_cands) - 1) * card_spacing)) / 2
+
+    svg += f'<text x="600" y="45" text-anchor="middle" font-size="24" font-weight="900" fill="#181720" letter-spacing="1px">{title}</text>'
+    
+    for idx, (cand_name, pct) in enumerate(top_cands):
+        color = cand_colors.get(cand_name, '#888888')
+        cx = start_x + idx * (card_width + card_spacing)
         
-    svg += '</svg>'
+        svg += f'<rect x="{cx + 5}" y="75" width="{card_width}" height="{card_height}" fill="#181720" rx="4"/>'
+        svg += f'<rect x="{cx}" y="70" width="{card_width}" height="{card_height}" fill="{color}" stroke="#181720" stroke-width="3" rx="4"/>'
+        
+        cand_short = str(cand_name).split(' ')[-1].upper()
+        if len(cand_short) > 15: cand_short = cand_short[:14] + "."
+        
+        svg += f'<text x="{cx + card_width/2}" y="{70 + card_height/2 + 6}" text-anchor="middle" fill="#fffffe" font-weight="900" font-size="18">{cand_short}</text>'
+        svg += f'<text x="{cx + card_width/2}" y="180" text-anchor="middle" fill="#181720" font-weight="900" font-size="28">% {pct:.2f}</text>'
+
+    map_svg_clean = re.sub(r"<\?xml.*?\?>", "", map_svg_str)
+    svg += f'<svg x="20" y="210" width="1160" height="630">{map_svg_clean}</svg>'
+    
+    import os
+    main_logo_data = get_svg_file_base64(os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.svg"))
+    svg += '<g transform="translate(30, 880)">'
+    if main_logo_data:
+        svg += f'<image href="{main_logo_data}" x="0" y="0" width="320" height="75" preserveAspectRatio="xMinYMin meet" />'
+    else:
+        svg += '<text x="0" y="50" font-size="32" font-weight="900" fill="#eb252d">AD PROJEKSİYON</text>'
+    svg += '</g></svg>'
     return svg
 
 # Arayüz ve Yan Menü
@@ -1519,7 +1518,7 @@ with tab_meclis:
         
         var img = new Image();
         img.onload = function() {{
-            ctx.fillStyle = "#ffffff"; 
+            ctx.fillStyle = "#fffffe"; 
             ctx.fillRect(0, 0, canvas.width, canvas.height); 
             ctx.drawImage(img, 0, 0);
             
