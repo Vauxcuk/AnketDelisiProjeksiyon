@@ -808,12 +808,7 @@ if 'active_parties' not in st.session_state:
     ozel_sira = ["AKP", "YENI", "DEM", "MHP", "IYI", "YRP", "A", "ZAFER", "TIP", "SAADET", "BBP", "CHP"]
     st.session_state.active_parties = [p for p in ozel_sira if p in PARTIES] + [p for p in PARTIES if p not in ozel_sira]
 
-with st.sidebar.expander("📌 Proje Hakkında", expanded=False):
-    st.markdown("""
-    **AD Projeksiyon**, Türkiye genel seçimleri ve cumhurbaşkanlığı seçimleri için geliştirilmiş gelişmiş bir veri analizi ve simülasyon aracıdır. 
-    
-    Log-odds ve geometrik ortalama tabanlı algoritmalarla ilçe bazlı **oy kayması (swing)** hesaplar, **D'Hondt sistemi** ile milletvekili dağılımını yansıtır ve sonuçları interaktif haritalara döker.
-    """)
+run_btn_placeholder = st.sidebar.empty()
 
 st.sidebar.markdown(f"""
 <style>
@@ -1062,11 +1057,21 @@ if st.sidebar.button("➕ Ortak Liste Ekle", use_container_width=True):
 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-if st.sidebar.button("🚀 SİMÜLASYONU ÇALIŞTIR", type="primary", use_container_width=True):
+# --- SİMÜLASYONU ÇALIŞTIR (Görsel Olarak En Tepede Çıkacak) ---
+if run_btn_placeholder.button("🚀 SİMÜLASYONU ÇALIŞTIR", type="primary", use_container_width=True):
     st.session_state.calc_params = {"user_inputs": copy.deepcopy(user_inputs), "threshold_input": threshold_input, "alliance_list": copy.deepcopy(st.session_state.alliance_list), "joint_list": copy.deepcopy(st.session_state.joint_list)}
 
 if "calc_params" not in st.session_state:
     st.session_state.calc_params = {"user_inputs": copy.deepcopy(user_inputs), "threshold_input": threshold_input, "alliance_list": copy.deepcopy(st.session_state.alliance_list), "joint_list": copy.deepcopy(st.session_state.joint_list)}
+
+# --- PROJE HAKKINDA (Menünün En Altına Yerleşecek) ---
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
+with st.sidebar.expander("📌 Proje Hakkında", expanded=False):
+    st.markdown("""
+    **AD Projeksiyon**, Türkiye genel seçimleri ve cumhurbaşkanlığı seçimleri için geliştirilmiş gelişmiş bir veri analizi ve simülasyon aracıdır. 
+    
+    Log-odds ve geometrik ortalama tabanlı algoritmalarla ilçe bazlı **oy kayması (swing)** hesaplar, **D'Hondt sistemi** ile milletvekili dağılımını yansıtır ve sonuçları interaktif haritalara döker.
+    """)
 
 # Projeksiyonu Çalıştırma
 params = st.session_state.calc_params
