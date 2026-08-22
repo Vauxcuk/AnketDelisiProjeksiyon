@@ -11,11 +11,18 @@ import math
 import re
 import base64
 import numpy as np
-
-st.set_page_config(page_title="AD Projeksiyon", layout="wide")
+from PIL import Image
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-logo_path = os.path.join(current_dir, "logo.svg")
+logo_path = os.path.join(current_dir, "logo.svg") # Sol menüde gözükecek büyük SVG logon
+
+favicon_path = os.path.join(current_dir, "favicon.png") 
+
+try:
+    favicon_img = Image.open(favicon_path)
+    st.set_page_config(page_title="AD Projeksiyon | Türkiye Genel Seçim ve Cumhurbaşkanlığı Simülasyonu", page_icon=favicon_img, layout="wide")
+except FileNotFoundError:
+    st.set_page_config(page_title="AD Projeksiyon | Türkiye Genel Seçim ve Cumhurbaşkanlığı Simülasyonu", page_icon="🗳️", layout="wide")
 
 if os.path.exists(logo_path):
     st.sidebar.image(logo_path, use_container_width=True)
@@ -31,6 +38,14 @@ t_seat_bg = "#333333"
 t_bar_bg = "#23222d"
 sidebar_input_bg = "#23222d"
 sidebar_input_border = "#444444"
+
+st.markdown(
+    """
+    <meta name="description" content="Türkiye genel seçim ve cumhurbaşkanlığı seçim simülasyonu. İlçe bazlı interaktif seçim haritası, D'Hondt hesaplama makinesi ve güncel anket projeksiyon aracı.">
+    <meta name="keywords" content="seçim simülasyonu, türkiye seçim haritası, d'hondt hesaplama, anket analizi, poliwave, seçim projeksiyonu, oy kayması, meclis oy dağılımı">
+    """,
+    unsafe_allow_html=True
+)
 
 custom_theme_css = f"""
 <style>
@@ -61,7 +76,6 @@ custom_theme_css = f"""
         color: {c_text} !important;
     }}
 
-    /* SİDEBAR VE GİRDİLER (Yan menüyü tasarlıyoruz) */
     section[data-testid="stSidebar"] {{
         background-color: {c_bg} !important;
         border-right: 3px solid {c_text} !important;
@@ -274,7 +288,6 @@ party_colors = {
 for cp_name, cp_data in st.session_state.custom_parties_def.items():
     party_colors[cp_name] = cp_data['color']
 
-# D'Hondt ve Baraj
 def calculate_dhondt(votes_dict, seat_count):
     seats_won = {p: 0 for p in votes_dict}
     divisors = {p: 1 for p in votes_dict}
@@ -475,7 +488,6 @@ def get_party_logo_base64(party_name):
                         return f"data:{mime};base64,{encoded}"
     return None
 
-# Türkiye haritası üzerindeki illerin manuel rozet koordinatları
 ALL_PROVINCE_COORDS = {
     'kars': (1935, 260), 'tunceli': (1520, 460), 'karaman': (830, 750), 'ankara1': (750, 410), 'konya': (730, 620),
     'izmir2': (80, 500), 'elazig': (1510, 535), 'malatya': (1350, 540), 'afyonkarahisar': (510, 525), 'erzincan': (1510, 370),
@@ -796,6 +808,13 @@ if 'joint_list' not in st.session_state:
 if 'active_parties' not in st.session_state:
     ozel_sira = ["AKP", "YENI", "DEM", "MHP", "IYI", "YRP", "A", "ZAFER", "TIP", "SAADET", "BBP", "CHP"]
     st.session_state.active_parties = [p for p in ozel_sira if p in PARTIES] + [p for p in PARTIES if p not in ozel_sira]
+
+with st.sidebar.expander("📌 Proje Hakkında", expanded=False):
+    st.markdown("""
+    **AD Projeksiyon**, Türkiye genel seçimleri ve cumhurbaşkanlığı seçimleri için geliştirilmiş gelişmiş bir veri analizi ve simülasyon aracıdır. 
+    
+    Log-odds ve geometrik ortalama (Poliwave) tabanlı algoritmalarla ilçe bazlı **oy kayması (swing)** hesaplar, **D'Hondt sistemi** ile milletvekili dağılımını yansıtır ve sonuçları Neobrutalist interaktif haritalara döker.
+    """)
 
 st.sidebar.markdown(f"""
 <style>
@@ -1722,7 +1741,8 @@ st.markdown(
     """
     <div style='text-align: center; color: #888888; font-size: 13px; font-family: "Space Grotesk", sans-serif; padding: 10px 0;'>
         <strong>AD PROJEKSİYON</strong> © 2026<br>
-        Projeksiyon için veri toplamada yardımcı olan @levificmete, @solunoktasi, @eypiuus, @yenipartilinsan ve @sdpgenko19 dostlarıma teşekkür ediyorum. Onlar olmadan olmazdı.        
+        Projeksiyon için veri toplamada yardımcı olan @levificmete, @solunoktasi, @eypiuus, @yenipartilinsan ve @sdpgenko19 dostlarıma teşekkür ediyorum. Onlar olmadan olmazdı.<br><br>
+        <span style='font-size: 10px; color: #333333;'>Anahtar Kelimeler: Seçim simülasyonu, ilçe bazlı seçim haritası, anket projeksiyonu, D'Hondt hesaplama makinesi, Türkiye siyasi analizi, oy dağılımı grafiği.</span>
     </div>
     """, 
     unsafe_allow_html=True
