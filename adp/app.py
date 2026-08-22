@@ -252,25 +252,25 @@ def load_base_data(w23, w24):
 @st.cache_data(show_spinner=False)
 def apply_custom_parties(df, custom_parties_dict):
     pivot_base = df.pivot_table(index='district', columns='party', values='base_vote_pct', aggfunc='sum').fillna(0)
-    new_rows = []
     
     all_party_defs = DEFAULT_TRANSITIONS.copy()
     for cp_name, cp_data in custom_parties_dict.items():
         all_party_defs[cp_name] = cp_data['bases']
         
-    for district, row_data in df.groupby('district'):
-        seat_count = row_data['seat_count'].iloc[0] if not pd.isna(row_data['seat_count'].iloc[0]) else 0
-        
-        for cp_name, bases in all_party_defs.items():
-            cp_vote = sum([pivot_base.loc[district, bp] * (weight / 100.0) for bp, weight in bases.items() if bp in pivot_base.columns])
-            new_rows.append({'district': district, 'party': cp_name, 'base_vote_pct': cp_vote, 'seat_count': seat_count})
-            
-    new_df = pd.DataFrame(new_rows)
+    weight_df = pd.DataFrame(all_party_defs).fillna(0) / 100.0
+    common_parties = [p for p in weight_df.index if p in pivot_base.columns]
+    
+    new_base = pivot_base[common_parties].dot(weight_df.loc[common_parties])
+    new_df = new_base.reset_index().melt(id_vars='district', var_name='party', value_name='base_vote_pct')
+    
+    seat_map = df.drop_duplicates('district').set_index('district')['seat_count'].fillna(0)
+    new_df['seat_count'] = new_df['district'].map(seat_map)
+    
     new_df['weighted_vote'] = new_df['base_vote_pct'] * new_df['seat_count']
     national_totals = new_df.groupby('party')['weighted_vote'].sum()
-    total_seats = new_df.groupby('district')['seat_count'].first().sum()
+    total_seats = seat_map.sum()
     
-    return new_df, (national_totals / total_seats).to_dict()
+    return new_df, (national_totals / total_seats).to_dict() if total_seats > 0 else national_totals.to_dict()
 
 w24_val = st.session_state.get("w24_weight", 10)
 w23_val = 100 - w24_val
@@ -334,43 +334,86 @@ def run_simulation(base_df, base_nat, user_nat, alliances, joint_lists, threshol
     P_prop = 100 / (1 + np.exp(-logit_P_prop))
     
     P_uni = df['R'] + (df['P_c'] - df['B_c'])
-    
     kemik_kitle = df['R'] * 0.03
     P_uni_safe = np.maximum(kemik_kitle, P_uni)
     
     df['proj_vote'] = np.sqrt(np.maximum(0.001, P_prop) * P_uni_safe)
-    
     df.loc[df['P_c'] <= 0.0, 'proj_vote'] = 0.0
     
     df['total_proj'] = df.groupby('district')['proj_vote'].transform('sum')
     df['norm_vote'] = (df['proj_vote'] / df['total_proj']) * 100
     df['norm_vote'] = df['norm_vote'].fillna(0)
 
-    results = []
-    for district, group in df.groupby('district'):
-        seat_count = group['seat_count'].iloc[0]
-        norm_votes = dict(zip(group['party'], group['norm_vote']))
-        
-        for umbrella, joiners in joint_lists.items():
-            if umbrella in norm_votes:
-                for jp in joiners:
-                    if jp in norm_votes:
-                        norm_votes[umbrella] += norm_votes[jp]
-                        norm_votes[jp] = 0.0
-                        
-        eligible_votes = {p: norm_votes[p] for p in qualified_parties if p in norm_votes and norm_votes[p] > 0}
-        district_seats = calculate_dhondt(eligible_votes, int(seat_count)) if eligible_votes else {}
+    # --- VEKTÖREL MATRİS OPTİMİZASYONU (SÜPER HIZLI D'HONDT VE ORTAK LİSTE) ---
+    pivot_votes = df.pivot(index='district', columns='party', values='norm_vote').fillna(0)
+    
+    for umbrella, joiners in joint_lists.items():
+        if umbrella in pivot_votes.columns:
+            for jp in joiners:
+                if jp in pivot_votes.columns:
+                    pivot_votes[umbrella] += pivot_votes[jp]
+                    pivot_votes[jp] = 0.0
+                    
+    pivot_eligible = pivot_votes.copy()
+    for col in pivot_eligible.columns:
+        if col not in qualified_parties:
+            pivot_eligible[col] = 0.0
             
-        for party in PARTIES:
-            results.append({
-                'district': district,
-                'province': district.split('-')[0],
-                'seat_count': seat_count,
-                'party': party,
-                'new_vote_pct': norm_votes.get(party, 0),
-                'seats_won': district_seats.get(party, 0)
+    districts = pivot_eligible.index.values
+    parties_arr = pivot_eligible.columns.values
+    V = pivot_eligible.values
+    
+    seat_map = df.drop_duplicates('district').set_index('district')['seat_count'].fillna(0).astype(int)
+    S = seat_map.loc[districts].values
+    
+    max_seats = int(S.max()) if len(S) > 0 else 1
+    divisors = np.arange(1, max_seats + 1)
+    
+    Q = V[:, :, None] / divisors[None, None, :]
+    Q_flat = Q.reshape(len(districts), -1)
+    
+    seats_won = np.zeros_like(V, dtype=int)
+    for i in range(len(districts)):
+        s = int(S[i])
+        if s > 0:
+            row_Q = Q_flat[i]
+            if np.max(row_Q) > 0:
+                top_indices = np.argsort(row_Q)[-s:]
+                valid = row_Q[top_indices] > 0
+                top_indices = top_indices[valid]
+                
+                winning_parties = top_indices // max_seats
+                unique_p, counts = np.unique(winning_parties, return_counts=True)
+                seats_won[i, unique_p] = counts
+                
+    res_seats = pd.DataFrame(seats_won, index=districts, columns=parties_arr)
+    
+    # HATA ÇÖZÜMÜ BURADA: İndeks ismini açıkça belirtiyoruz
+    res_seats.index.name = 'district'
+    
+    res_seats_melt = res_seats.reset_index().melt(id_vars='district', var_name='party', value_name='seats_won')
+    res_votes_melt = pivot_votes.reset_index().melt(id_vars='district', var_name='party', value_name='new_vote_pct')
+    
+    final_res = pd.merge(res_votes_melt, res_seats_melt, on=['district', 'party'])
+    final_res['province'] = final_res['district'].str.split('-').str[0]
+    final_res['seat_count'] = final_res['district'].map(seat_map)
+    
+    missing = [p for p in PARTIES if p not in parties_arr]
+    if missing:
+        missing_dfs = []
+        for mp in missing:
+            temp = pd.DataFrame({
+                'district': districts,
+                'party': mp,
+                'new_vote_pct': 0.0,
+                'seats_won': 0,
+                'province': [str(d).split('-')[0] for d in districts],
+                'seat_count': S
             })
-    return pd.DataFrame(results)
+            missing_dfs.append(temp)
+        final_res = pd.concat([final_res] + missing_dfs, ignore_index=True)
+        
+    return final_res
 
 # Harita Çizim
 @st.cache_data(show_spinner=False)
@@ -775,6 +818,51 @@ def generate_regional_infographic_svg(province_name, top_parties_df, map_svg_str
     map_svg_clean = re.sub(r"<\?xml.*?\?>", "", map_svg_str)
     svg += f'<svg x="20" y="210" width="1160" height="630">{map_svg_clean}</svg>'
     
+    main_logo_data = get_svg_file_base64(os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.svg"))
+    svg += '<g transform="translate(30, 880)">'
+    if main_logo_data:
+        svg += f'<image href="{main_logo_data}" x="0" y="0" width="320" height="75" preserveAspectRatio="xMinYMin meet" />'
+    else:
+        svg += '<text x="0" y="50" font-size="32" font-weight="900" fill="#eb252d">AD PROJEKSİYON</text>'
+    svg += '</g>'
+        
+    svg += '</svg>'
+    return svg
+
+def generate_cb_infographic_svg(title, cands_data, map_svg_str, cand_colors):
+    svg = '<svg width="1200" height="980" viewBox="0 0 1200 980" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background-color: white; font-family: \'Space Grotesk\', sans-serif;">'
+    svg += '<rect width="100%" height="100%" fill="#ffffff" />'
+    
+    card_width = 170
+    card_height = 65
+    card_spacing = 25
+    
+    top_cands = sorted(cands_data, key=lambda x: x[1], reverse=True)[:5]
+    top_cands = [c for c in top_cands if c[1] > 0]
+    
+    start_x = (1200 - (len(top_cands) * card_width + (len(top_cands) - 1) * card_spacing)) / 2
+
+    svg += f'<text x="600" y="45" text-anchor="middle" font-size="24" font-weight="900" fill="#181720" letter-spacing="1px">{title}</text>'
+    
+    for idx, (cand_name, pct) in enumerate(top_cands):
+        color = cand_colors.get(cand_name, '#888888')
+        cx = start_x + idx * (card_width + card_spacing)
+        
+        # Neobrutalist Dikdörtgen Aday Kartları
+        svg += f'<rect x="{cx + 5}" y="75" width="{card_width}" height="{card_height}" fill="#181720" rx="4"/>'
+        svg += f'<rect x="{cx}" y="70" width="{card_width}" height="{card_height}" fill="{color}" stroke="#181720" stroke-width="3" rx="4"/>'
+        
+        cand_short = str(cand_name).split(' ')[-1].upper()
+        if len(cand_short) > 15: cand_short = cand_short[:14] + "."
+        
+        svg += f'<text x="{cx + card_width/2}" y="{70 + card_height/2 + 6}" text-anchor="middle" fill="#ffffff" font-weight="900" font-size="18">{cand_short}</text>'
+        svg += f'<text x="{cx + card_width/2}" y="180" text-anchor="middle" fill="#181720" font-weight="900" font-size="28">% {pct:.2f}</text>'
+
+    # Harita yerleşimi
+    map_svg_clean = re.sub(r"<\?xml.*?\?>", "", map_svg_str)
+    svg += f'<svg x="20" y="210" width="1160" height="630">{map_svg_clean}</svg>'
+    
+    import os
     main_logo_data = get_svg_file_base64(os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.svg"))
     svg += '<g transform="translate(30, 880)">'
     if main_logo_data:
@@ -1608,7 +1696,6 @@ with tab_cb:
             
         return cb_res, cand_color_map
 
-    # --- İLÇE DETAY MOTORU ---
     @st.cache_data(show_spinner=False)
     def calculate_cb_district_results(cands_list, df_results_data, colors_override, cb_parties_list):
         pivot_dist_votes = df_results_data.pivot(index='district', columns='party', values='new_vote_pct').fillna(0)
@@ -1622,32 +1709,68 @@ with tab_cb:
         cand_votes_dist_norm = cand_votes_dist_norm.div(row_sums, axis=0).fillna(0) * 100
         
         df_cb_dist = cand_votes_dist_norm.reset_index().melt(id_vars='district', var_name='candidate', value_name='pct')
-        df_cb_dist['province'] = df_cb_dist['district'].apply(lambda x: x.split('-')[0])
+        df_cb_dist['province'] = df_cb_dist['district'].str.split('-').str[0]
         
-        cb_prov_winners, cb_dist_winners, cb_heatmap_colors = {}, {}, {}
+        districts = cand_votes_dist_norm.index.values
+        candidates = cand_votes_dist_norm.columns.values
+        V = cand_votes_dist_norm.values
         
-        dist_max_df = df_cb_dist.loc[df_cb_dist.groupby('district')['pct'].idxmax()]
-        for _, r in dist_max_df.iterrows():
-            n_dist = normalize_id(r['district'])
-            cand, vote = r['candidate'], r['pct']
+        cb_dist_winners = {}
+        cb_heatmap_colors = {}
+        norm_districts = [normalize_id(d) for d in districts]
+        
+        win_idx = np.argmax(V, axis=1)
+        for i in range(len(districts)):
+            n_dist = norm_districts[i]
+            cand = candidates[win_idx[i]]
+            vote = V[i, win_idx[i]]
             cb_dist_winners[n_dist] = cand
             cb_heatmap_colors[n_dist] = get_heatmap_color(colors_override.get(cand, "#888888"), max(0.3, min(1.0, vote / 65.0)))
             
-        prov_max_df = df_cb_dist.groupby(['province', 'candidate'])['pct'].mean().reset_index()
-        prov_max_df = prov_max_df.loc[prov_max_df.groupby('province')['pct'].idxmax()]
-        for _, r in prov_max_df.iterrows():
-            n_prov = normalize_id(r['province'])
-            cand, vote = r['candidate'], r['pct']
+        prov_mean_df = df_cb_dist.groupby(['province', 'candidate'])['pct'].mean().unstack()
+        provinces = prov_mean_df.index.values
+        prov_candidates = prov_mean_df.columns.values
+        prov_V = prov_mean_df.values
+        
+        cb_prov_winners = {}
+        norm_provinces = [normalize_id(p) for p in provinces]
+        prov_win_idx = np.argmax(prov_V, axis=1)
+        
+        for i in range(len(provinces)):
+            n_prov = norm_provinces[i]
+            cand = prov_candidates[prov_win_idx[i]] # Oyları yeni sıraya göre çekiyoruz
+            vote = prov_V[i, prov_win_idx[i]]
             cb_prov_winners[n_prov] = cand
             cb_heatmap_colors[n_prov] = get_heatmap_color(colors_override.get(cand, "#888888"), max(0.3, min(1.0, vote / 65.0)))
             if n_prov in ['istanbul', 'ankara', 'izmir', 'bursa']:
-                for sub_id in [f"{n_prov}1", f"{n_prov}2", f"{n_prov}3"]: cb_heatmap_colors[sub_id] = cb_heatmap_colors[n_prov]
+                for sub_id in [f"{n_prov}1", f"{n_prov}2", f"{n_prov}3"]: 
+                    cb_heatmap_colors[sub_id] = cb_heatmap_colors[n_prov]
         
         cb_tooltips = {}
-        for d_name, grp in df_cb_dist.groupby('district'):
-            cb_tooltips[normalize_id(d_name)] = f'<div class="tip-header">📌 {d_name} (CB Seçimi)</div>' + "".join([f'<div class="tip-row"><div class="tip-party" style="width:100px;">{r["candidate"]}</div><div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {r["pct"]}%; background-color: {colors_override.get(r["candidate"], "#888888")};"></div></div><div class="tip-pct">%{r["pct"]:.1f}</div></div>' for _, r in grp.sort_values(by='pct', ascending=False).iterrows()])
-        for p_name, grp in df_cb_dist.groupby('province'):
-            cb_tooltips[normalize_id(p_name)] = f'<div class="tip-header">📌 {p_name} (CB Seçimi)</div>' + "".join([f'<div class="tip-row"><div class="tip-party" style="width:100px;">{r["candidate"]}</div><div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {r["pct"]}%; background-color: {colors_override.get(r["candidate"], "#888888")};"></div></div><div class="tip-pct">%{r["pct"]:.1f}</div></div>' for _, r in grp.groupby('candidate')['pct'].mean().reset_index().sort_values(by='pct', ascending=False).iterrows()])
+        sort_idx = np.argsort(-V, axis=1)
+        
+        for i in range(len(districts)):
+            html_parts = [f'<div class="tip-header">📌 {districts[i]} (CB Seçimi)</div>']
+            for rank in range(len(candidates)):
+                c_idx = sort_idx[i, rank]
+                pct = V[i, c_idx]
+                if pct > 0:
+                    cand_name = candidates[c_idx]
+                    cand_col = colors_override.get(cand_name, "#888888")
+                    html_parts.append(f'<div class="tip-row"><div class="tip-party" style="width:100px;">{cand_name}</div><div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {pct}%; background-color: {cand_col};"></div></div><div class="tip-pct">%{pct:.1f}</div></div>')
+            cb_tooltips[norm_districts[i]] = "".join(html_parts)
+            
+        prov_sort_idx = np.argsort(-prov_V, axis=1)
+        for i in range(len(provinces)):
+            html_parts = [f'<div class="tip-header">📌 {provinces[i]} (CB Seçimi)</div>']
+            for rank in range(len(prov_candidates)):
+                c_idx = prov_sort_idx[i, rank]
+                pct = prov_V[i, c_idx]
+                if pct > 0:
+                    cand_name = prov_candidates[c_idx] # Aday adını doğru dizilimden çekiyoruz
+                    cand_col = colors_override.get(cand_name, "#888888")
+                    html_parts.append(f'<div class="tip-row"><div class="tip-party" style="width:100px;">{cand_name}</div><div class="tip-bar-bg"><div class="tip-bar-fill" style="width: {pct}%; background-color: {cand_col};"></div></div><div class="tip-pct">%{pct:.1f}</div></div>')
+            cb_tooltips[norm_provinces[i]] = "".join(html_parts)
             
         return cb_prov_winners, cb_dist_winners, cb_heatmap_colors, cb_tooltips, df_cb_dist
 
@@ -1701,7 +1824,34 @@ with tab_cb:
                     else: 
                         st.warning(f"⚖️ Hiçbir aday %50+1'e ulaşamadı. **{sorted_1_nat[0][0]}** ve **{sorted_1_nat[1][0]}** 2. tura kaldı.")
 
-            # 2. Tur
+                # --- 1. TUR İNFOGRAFİK BUTONU (Kutunun En Altında, Ortalanmış) ---
+                # ÇÖZÜM: İnfografik için harita oluştururken t_tips1 (HTML) yerine dict() (Boş Veri) gönderiyoruz ki SVG bozulmasın!
+                rendered_cb_map_1_info = render_colored_svg(p_win1, d_win1, cand_color_map_1, dict(), show_badges=False, custom_colors=c_heatmap_cols1, svg_file_name=cb_target_svg_1)
+                title_1 = f"CUMHURBAŞKANLIĞI 1. TUR - {cb_master_region_1.upper()} SONUÇLARI"
+                final_cb_svg_1 = generate_cb_infographic_svg(title_1, bar_data_1, rendered_cb_map_1_info, cand_color_map_1)
+                
+                st.markdown("<hr style='margin: 5px 0 10px 0; border-width: 2px; border-color: #eb252d;'>", unsafe_allow_html=True)
+                components.html(f"""
+                <div id="info-cont-cb1" style="display:none;">{final_cb_svg_1}</div>
+                <button id="dl-btn-cb1" style="background-color: #eb252d; color: white; border: 3px solid #ffffff; box-shadow: 4px 4px 0px #ffffff; font-weight: 900; padding: 12px 20px; font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; cursor: pointer; width: 100%; margin-top: 0px;">📸 1. Tur İnfografiğini İndir ({cb_master_region_1})</button>
+                <script>
+                document.getElementById('dl-btn-cb1').addEventListener('click', function() {{
+                    var btn = this; var origText = btn.innerText; btn.innerText = "Görsel Hazırlanıyor...";
+                    var canvas = document.createElement("canvas"); var scale = 2;
+                    canvas.width = 1200 * scale; canvas.height = 980 * scale;
+                    var ctx = canvas.getContext("2d"); ctx.scale(scale, scale);
+                    var img = new Image();
+                    img.onload = function() {{
+                        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0);
+                        var a = document.createElement("a"); a.download = "cb_1_tur_{normalize_id(cb_master_region_1)}.png"; a.href = canvas.toDataURL("image/png"); a.click();
+                        btn.innerText = origText;
+                    }};
+                    img.src = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(document.querySelector("#info-cont-cb1 svg"))], {{type: "image/svg+xml;charset=utf-8"}}));
+                }});
+                </script>
+                """, height=70)
+
+            # --- 2. TUR SİMÜLASYONU ---
             if kazanan_orani_nat <= 50.0 and len(sorted_1_nat) > 1:
                 st.divider()
                 top1, top2 = sorted_1_nat[0][0], sorted_1_nat[1][0]
@@ -1781,6 +1931,32 @@ with tab_cb:
                                 
                                 sorted_2_nat = sorted(cb_res_2.items(), key=lambda x: x[1], reverse=True)
                                 st.success(f"🇹🇷 Türkiye'nin Cumhurbaşkanı: **{sorted_2_nat[0][0]}** (%{ (sorted_2_nat[0][1]/total_cb_2)*100:.2f})")
+
+                            # --- 2. TUR İNFOGRAFİK BUTONU (Kutunun En Altında, Ortalanmış) ---
+                            rendered_cb_map_2_info = render_colored_svg(p_win2, d_win2, cand_color_map_2, dict(), show_badges=False, custom_colors=c_heatmap_cols2, svg_file_name=cb_target_svg_2)
+                            title_2 = f"CUMHURBAŞKANLIĞI 2. TUR - {cb_master_region_2.upper()} SONUÇLARI"
+                            final_cb_svg_2 = generate_cb_infographic_svg(title_2, bar_data_2, rendered_cb_map_2_info, cand_color_map_2)
+                            
+                            st.markdown("<hr style='margin: 5px 0 10px 0; border-width: 2px; border-color: #eb252d;'>", unsafe_allow_html=True)
+                            components.html(f"""
+                            <div id="info-cont-cb2" style="display:none;">{final_cb_svg_2}</div>
+                            <button id="dl-btn-cb2" style="background-color: #eb252d; color: white; border: 3px solid #ffffff; box-shadow: 4px 4px 0px #ffffff; font-weight: 900; padding: 12px 20px; font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; cursor: pointer; width: 100%; margin-top: 0px;">📸 2. Tur İnfografiğini İndir ({cb_master_region_2})</button>
+                            <script>
+                            document.getElementById('dl-btn-cb2').addEventListener('click', function() {{
+                                var btn = this; var origText = btn.innerText; btn.innerText = "Görsel Hazırlanıyor...";
+                                var canvas = document.createElement("canvas"); var scale = 2;
+                                canvas.width = 1200 * scale; canvas.height = 980 * scale;
+                                var ctx = canvas.getContext("2d"); ctx.scale(scale, scale);
+                                var img = new Image();
+                                img.onload = function() {{
+                                    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0);
+                                    var a = document.createElement("a"); a.download = "cb_2_tur_{normalize_id(cb_master_region_2)}.png"; a.href = canvas.toDataURL("image/png"); a.click();
+                                    btn.innerText = origText;
+                                }};
+                                img.src = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(document.querySelector("#info-cont-cb2 svg"))], {{type: "image/svg+xml;charset=utf-8"}}));
+                            }});
+                            </script>
+                            """, height=70)
 
 #FOOTER
 st.markdown("<br><br>", unsafe_allow_html=True)
